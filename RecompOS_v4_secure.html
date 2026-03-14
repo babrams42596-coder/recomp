@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RecompOS">
+<title>RecompOS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap');
+
+:root {
+  --bg: #0f0f11;
+  --bg2: #161619;
+  --bg3: #1e1e23;
+  --bg4: #26262d;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e8e8ec;
+  --text2: #9898a8;
+  --text3: #5a5a6e;
+  --accent: #7c6af7;
+  --accent2: #5b4fd4;
+  --green: #4ade80;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --teal: #2dd4bf;
+  --pink: #f472b6;
+  --pc: #60a5fa;
+  --cc: #fbbf24;
+  --fc: #4ade80;
+  --kcal: #f472b6;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+
+/* ══════════════════════════════════════════
+   AUTH SCREEN
+══════════════════════════════════════════ */
+#auth-screen {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: max(24px, var(--safe-top)) 24px max(24px, var(--safe-bottom));
+  background: var(--bg);
+}
+.auth-card {
+  width: 100%; max-width: 400px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 24px; padding: 36px 28px;
+}
+.auth-logo { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -0.03em; margin-bottom: 6px; }
+.auth-logo span { color: var(--accent); }
+.auth-sub { font-size: 14px; color: var(--text3); margin-bottom: 28px; line-height: 1.5; }
+.auth-label { font-family: 'DM Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); margin-bottom: 8px; }
+.auth-input {
+  width: 100%; padding: 14px 16px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 12px; color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 16px;
+  outline: none; margin-bottom: 16px; transition: border-color .15s;
+  -webkit-appearance: none;
+}
+.auth-input:focus { border-color: var(--accent); }
+.auth-btn {
+  width: 100%; padding: 16px;
+  background: var(--accent); border: none; border-radius: 14px;
+  color: #fff; font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 600;
+  cursor: pointer; transition: background .15s; margin-top: 4px;
+}
+.auth-btn:active { background: var(--accent2); }
+.auth-btn:disabled { opacity: 0.5; }
+.auth-error {
+  background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3);
+  border-radius: 10px; padding: 12px 14px; font-size: 13px; color: var(--red);
+  margin-bottom: 16px; display: none; line-height: 1.5;
+}
+.pw-wrap { position: relative; margin-bottom: 16px; }
+.pw-wrap .auth-input { margin-bottom: 0; padding-right: 52px; }
+.pw-toggle {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; color: var(--text3);
+  font-size: 18px; padding: 4px; line-height: 1; transition: color .15s;
+}
+.pw-toggle:active { color: var(--text); }
+.remember-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 20px; margin-top: 4px;
+}
+.remember-row input[type=checkbox] {
+  width: 20px; height: 20px; border-radius: 6px; cursor: pointer;
+  accent-color: var(--accent); flex-shrink: 0;
+}
+.remember-row label { font-size: 14px; color: var(--text2); cursor: pointer; user-select: none; }
+
+/* ══════════════════════════════════════════
+   APP SHELL
+══════════════════════════════════════════ */
+#app { display: none; height: 100%; flex-direction: column; }
+#app.visible { display: flex; }
+
+/* ── HEADER ── */
+.header {
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  padding: 0 16px; padding-top: var(--safe-top);
+  height: calc(56px + var(--safe-top));
+  display: flex; align-items: flex-end; padding-bottom: 0;
+  flex-shrink: 0; position: relative; z-index: 50;
+}
+.header-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; height: 56px;
+}
+.logo { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.02em; }
+.logo span { color: var(--accent); }
+.header-right { display: flex; align-items: center; gap: 8px; }
+.icon-btn {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--bg3); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text2); font-size: 18px; transition: all .15s;
+  flex-shrink: 0;
+}
+.icon-btn:active { background: var(--bg4); }
+.week-pill {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  background: var(--bg4); border: 1px solid var(--border2);
+  border-radius: 20px; padding: 4px 10px; color: var(--text2);
+}
+.sync-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+  flex-shrink: 0;
+}
+.sync-dot.syncing { background: var(--amber); animation: pulse 1s infinite; }
+.sync-dot.error { background: var(--red); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── DESKTOP HEADER EXTRAS ── */
+.desktop-only { display: none; }
+@media (min-width: 768px) {
+  .desktop-only { display: flex; }
+  .mobile-only { display: none !important; }
+  .header { height: 60px; padding-top: 0; }
+  .header-inner { height: 60px; }
+  .logo { font-size: 16px; }
+}
+
+/* ── BODY ── */
+.app-body {
+  display: flex; flex: 1; overflow: hidden;
+}
+
+/* ══════════════════════════════════════════
+   SIDEBAR (desktop only)
+══════════════════════════════════════════ */
+.sidebar {
+  width: 280px; flex-shrink: 0;
+  background: var(--bg2); border-right: 1px solid var(--border);
+  overflow-y: auto; display: none; padding: 20px 16px;
+}
+@media (min-width: 768px) { .sidebar { display: block; } }
+.sidebar-section { margin-bottom: 24px; }
+.sidebar-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .1em; color: var(--text3); text-transform: uppercase; margin-bottom: 8px; padding: 0 4px; }
+.month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.month-label { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; }
+.week-grid { display: flex; flex-direction: column; gap: 2px; }
+.week-row { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+.week-day-header { text-align: center; font-family: 'DM Mono', monospace; font-size: 9px; color: var(--text3); padding: 4px 0; }
+.day-cell { aspect-ratio:1; border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; font-family:'DM Mono',monospace; font-size:10px; color:var(--text3); background:var(--bg3); border:1px solid transparent; transition:all .12s; position:relative; }
+.day-cell:hover { border-color:var(--border2); color:var(--text); }
+.day-cell.today { border-color:var(--accent); color:var(--accent); background:rgba(124,106,247,0.1); }
+.day-cell.selected { background:var(--accent); color:#fff; border-color:var(--accent); }
+.day-cell.workout-marker::after { content:''; width:3px; height:3px; border-radius:50%; position:absolute; top:3px; background:var(--accent); }
+.day-cell .dot { width:3px; height:3px; border-radius:50%; position:absolute; bottom:3px; background:var(--green); display:none; }
+.day-cell.logged .dot { display:block; }
+.ring-row { display:flex; gap:8px; }
+.ring-card { flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:10px 8px; text-align:center; }
+.ring-card svg { width:44px; height:44px; }
+.ring-label { font-size:10px; color:var(--text3); margin-top:4px; font-family:'DM Mono',monospace; }
+.ring-val { font-size:11px; font-weight:500; color:var(--text); }
+.streak-card { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:12px; display:flex; align-items:center; gap:12px; }
+.streak-num { font-family:'Syne',sans-serif; font-size:32px; font-weight:700; color:var(--amber); line-height:1; }
+.streak-text { font-size:12px; color:var(--text2); }
+.streak-sub { font-size:11px; color:var(--text3); margin-top:2px; }
+.mp-row { display:grid; grid-template-columns:60px 1fr 70px; gap:8px; align-items:center; margin-bottom:8px; }
+.mp-lbl { font-size:11px; color:var(--text2); font-family:'DM Mono',monospace; }
+.mp-bar-wrap { background:var(--bg4); border-radius:4px; height:5px; }
+.mp-bar { height:5px; border-radius:4px; transition:width .4s; }
+.mp-nums { font-family:'DM Mono',monospace; font-size:10px; color:var(--text3); text-align:right; }
+.mp-nums span { color:var(--text); }
+
+/* ══════════════════════════════════════════
+   CALENDAR DRAWER (mobile)
+══════════════════════════════════════════ */
+.drawer-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+}
+.drawer-overlay.open { display: block; }
+.drawer {
+  position: fixed; left: 0; top: 0; bottom: 0; z-index: 201;
+  width: min(320px, 90vw);
+  background: var(--bg2); border-right: 1px solid var(--border);
+  padding: max(20px,var(--safe-top)) 16px max(20px,var(--safe-bottom));
+  overflow-y: auto;
+  transform: translateX(-100%); transition: transform .3s cubic-bezier(.4,0,.2,1);
+}
+.drawer.open { transform: translateX(0); }
+.drawer-close {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.drawer-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+.drawer-x {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--bg3); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text2); font-size: 20px;
+}
+
+/* ══════════════════════════════════════════
+   MAIN CONTENT
+══════════════════════════════════════════ */
+.content {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 16px 16px max(80px, calc(60px + var(--safe-bottom)));
+}
+@media (min-width: 768px) {
+  .content { padding: 24px 24px 40px; }
+}
+
+/* ── WEEK STRIP ── */
+.week-strip { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-bottom:16px; }
+.ws-cell { background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:8px 4px; text-align:center; cursor:pointer; transition:all .15s; }
+.ws-cell:active { background:var(--bg3); }
+.ws-cell.selected { border-color:var(--accent); background:rgba(124,106,247,0.08); }
+.ws-cell.today { border-color:rgba(124,106,247,0.5); }
+.ws-day { font-family:'DM Mono',monospace; font-size:9px; color:var(--text3); margin-bottom:2px; }
+.ws-num { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; }
+.ws-type { font-size:9px; color:var(--text3); margin-top:2px; }
+.ws-cell.workout-day .ws-type { color:var(--accent); }
+.ws-cell.rest-day .ws-type { color:var(--teal); }
+.ws-dot { width:4px; height:4px; border-radius:50%; background:var(--green); margin:3px auto 0; opacity:0; }
+.ws-cell.has-log .ws-dot { opacity:1; }
+
+/* ── DAY HEADER ── */
+.day-header { margin-bottom: 16px; }
+.day-overline { font-family:'DM Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--text3); margin-bottom:4px; }
+.day-title { font-family:'Syne',sans-serif; font-size:22px; font-weight:700; letter-spacing:-0.02em; line-height:1.1; }
+@media (min-width:768px) { .day-title { font-size:28px; } }
+.day-badge { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px; font-family:'DM Mono',monospace; font-size:11px; font-weight:500; margin-top:8px; }
+.badge-workout { background:rgba(124,106,247,0.15); color:var(--accent); border:1px solid rgba(124,106,247,0.3); }
+.badge-rest { background:rgba(45,212,191,0.1); color:var(--teal); border:1px solid rgba(45,212,191,0.2); }
+.phase-tip { background:var(--bg3); border-left:2px solid var(--accent); border-radius:0 8px 8px 0; padding:10px 12px; font-size:13px; color:var(--text2); margin-top:10px; line-height:1.6; }
+
+/* ── MACRO CHIPS ── */
+.macro-chips { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; }
+.mc { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:10px 6px; text-align:center; }
+.mc-val { font-family:'DM Mono',monospace; font-size:14px; font-weight:500; }
+.mc-lbl { font-size:10px; color:var(--text3); margin-top:2px; font-family:'DM Mono',monospace; }
+.mc.cal .mc-val { color:var(--kcal); } .mc.pro .mc-val { color:var(--pc); } .mc.carb .mc-val { color:var(--cc); } .mc.fat .mc-val { color:var(--fc); }
+
+/* ── CARDS ── */
+.card { background:var(--bg2); border:1px solid var(--border); border-radius:16px; overflow:hidden; margin-bottom:12px; }
+.card-hd { padding:14px 16px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.card-hd-left { display:flex; align-items:center; gap:8px; }
+.card-ico { font-size:16px; }
+.card-ttl { font-family:'Syne',sans-serif; font-size:14px; font-weight:600; }
+.card-bd { padding:14px 16px; }
+
+/* ── TABS (mobile) ── */
+.tab-bar {
+  display:flex; background:var(--bg3); border-radius:12px; padding:3px; margin-bottom:14px; gap:2px;
+}
+.tab-btn {
+  flex:1; padding:9px 6px; border-radius:9px; border:none; background:transparent;
+  color:var(--text3); font-family:'DM Mono',monospace; font-size:11px; cursor:pointer;
+  transition:all .15s; white-space:nowrap;
+}
+.tab-btn.active { background:var(--bg2); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,0.3); }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+
+/* ── MEALS ── */
+.meal-item { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:10px; transition:border-color .15s; }
+.meal-item.logged { border-color:rgba(74,222,128,0.35); background:rgba(74,222,128,0.04); }
+.meal-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.meal-name { font-weight:500; font-size:14px; }
+.meal-time { font-family:'DM Mono',monospace; font-size:11px; color:var(--text3); }
+.meal-pills { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px; }
+.mpill { font-family:'DM Mono',monospace; font-size:10px; padding:3px 7px; border-radius:5px; border:1px solid; }
+.mpill.p { border-color:rgba(96,165,250,0.3); color:var(--pc); background:rgba(96,165,250,0.08); }
+.mpill.c { border-color:rgba(251,191,36,0.3); color:var(--cc); background:rgba(251,191,36,0.08); }
+.mpill.f { border-color:rgba(74,222,128,0.3); color:var(--fc); background:rgba(74,222,128,0.08); }
+.mpill.k { border-color:rgba(244,114,182,0.3); color:var(--kcal); background:rgba(244,114,182,0.08); }
+.food-list { list-style:none; margin-bottom:12px; }
+.food-list li { font-size:12px; color:var(--text3); padding:3px 0 3px 12px; position:relative; line-height:1.5; }
+.food-list li::before { content:'—'; position:absolute; left:0; color:var(--text3); }
+.log-btn {
+  width:100%; padding:11px; border-radius:10px;
+  border:1px solid var(--border2); background:transparent;
+  color:var(--text2); font-family:'DM Mono',monospace; font-size:12px;
+  cursor:pointer; transition:all .15s;
+}
+.log-btn:active { background:var(--bg4); }
+.meal-item.logged .log-btn { background:rgba(74,222,128,0.1); border-color:rgba(74,222,128,0.3); color:var(--green); }
+
+/* ── EXERCISES ── */
+.ex-item { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:10px; transition:border-color .15s; }
+.ex-item.logged { border-color:rgba(124,106,247,0.4); background:rgba(124,106,247,0.05); }
+.ex-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+.ex-name { font-weight:500; font-size:14px; }
+.ex-tag { font-family:'DM Mono',monospace; font-size:10px; padding:2px 8px; border-radius:5px; background:rgba(124,106,247,0.15); color:var(--accent); border:1px solid rgba(124,106,247,0.3); }
+.ex-sets { font-family:'DM Mono',monospace; font-size:12px; color:var(--text2); margin-bottom:3px; }
+.ex-note { font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5; }
+.ex-inputs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+.ex-input {
+  padding:11px 10px; background:var(--bg4); border:1px solid var(--border);
+  border-radius:10px; color:var(--text); font-family:'DM Mono',monospace; font-size:13px;
+  outline:none; width:100%; transition:border-color .15s; -webkit-appearance:none;
+}
+.ex-input:focus { border-color:var(--accent); }
+.ex-input::placeholder { color:var(--text3); }
+.ex-log-btn {
+  width:100%; padding:11px; border-radius:10px;
+  border:1px solid var(--accent); background:rgba(124,106,247,0.15);
+  color:var(--accent); font-family:'DM Mono',monospace; font-size:12px;
+  cursor:pointer; transition:all .15s;
+}
+.ex-log-btn:active { background:var(--accent); color:#fff; }
+.ex-item.logged .ex-log-btn { background:var(--accent); color:#fff; }
+.warmup-bar { font-size:12px; color:var(--text3); background:var(--bg3); border-left:2px solid var(--accent); border-radius:0 8px 8px 0; padding:10px 12px; margin-bottom:14px; line-height:1.6; }
+.cardio-bar { background:var(--bg3); border:1px solid rgba(45,212,191,0.2); border-radius:10px; padding:12px; margin-top:10px; }
+.cardio-ttl { font-size:13px; font-weight:500; color:var(--teal); margin-bottom:4px; }
+.cardio-desc { font-size:12px; color:var(--text2); line-height:1.6; }
+
+/* ── REST DAY ── */
+.rest-card { background:var(--bg3); border:1px solid rgba(45,212,191,0.15); border-radius:14px; padding:20px; margin-bottom:12px; }
+.rest-ttl { font-family:'Syne',sans-serif; font-size:17px; font-weight:600; color:var(--teal); margin-bottom:8px; }
+.rest-body { font-size:13px; color:var(--text2); line-height:1.6; margin-bottom:14px; }
+.rest-tip { background:var(--bg4); border-left:2px solid var(--teal); border-radius:0 8px 8px 0; padding:10px 12px; font-size:13px; color:var(--text2); line-height:1.6; }
+
+/* ── NOTES ── */
+.notes-area {
+  width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:12px;
+  padding:12px 14px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:15px;
+  resize:none; min-height:100px; outline:none; transition:border-color .15s;
+  -webkit-appearance:none;
+}
+.notes-area:focus { border-color:var(--border2); }
+.save-btn {
+  margin-top:10px; padding:11px 18px; border-radius:10px;
+  border:1px solid var(--border2); background:var(--bg4);
+  color:var(--text2); font-family:'DM Mono',monospace; font-size:12px; cursor:pointer;
+}
+.save-btn:active { background:var(--bg3); color:var(--text); }
+.saved-flash { color:var(--green); font-family:'DM Mono',monospace; font-size:11px; margin-left:8px; opacity:0; transition:opacity .3s; }
+
+/* ── COMPLETE BTN ── */
+.complete-btn {
+  width:100%; padding:15px; border-radius:14px; margin-top:12px;
+  border:1px solid rgba(74,222,128,0.3); background:rgba(74,222,128,0.08);
+  color:var(--green); font-family:'Syne',sans-serif; font-size:15px; font-weight:600;
+  cursor:pointer; transition:all .15s;
+}
+.complete-btn:active { background:rgba(74,222,128,0.2); }
+.complete-btn.done { background:var(--green); color:#0f0f11; border-color:var(--green); }
+
+/* ── DESKTOP GRID ── */
+@media (min-width:768px) {
+  .desktop-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .desktop-grid .span2 { grid-column:1/-1; }
+  .tab-bar { display:none; }
+  .tab-panel { display:block !important; }
+  .mobile-nav-bar { display:none !important; }
+}
+
+/* ── MOBILE NAV BAR ── */
+.mobile-nav-bar {
+  position:fixed; bottom:0; left:0; right:0; z-index:50;
+  background:var(--bg2); border-top:1px solid var(--border);
+  padding-bottom:var(--safe-bottom);
+  display:flex;
+}
+.mnb-btn {
+  flex:1; padding:10px 4px; display:flex; flex-direction:column;
+  align-items:center; gap:3px; cursor:pointer; border:none; background:transparent;
+  color:var(--text3); transition:color .15s;
+}
+.mnb-btn.active { color:var(--accent); }
+.mnb-ico { font-size:20px; }
+.mnb-lbl { font-family:'DM Mono',monospace; font-size:9px; }
+
+/* ── MISC ── */
+.sep { border:none; border-top:1px solid var(--border); margin:14px 0; }
+.section-lbl { font-family:'DM Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text3); margin-bottom:10px; }
+.loading-screen { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:500; }
+.loading-logo { font-family:'Syne',sans-serif; font-size:28px; font-weight:700; letter-spacing:-0.03em; animation:fadeIn 0.4s ease; }
+.loading-logo span { color:var(--accent); }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loading-screen">
+  <div class="loading-logo">RECOMP<span>OS</span></div>
+</div>
+
+<!-- AUTH -->
+<div id="auth-screen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">RECOMP<span>OS</span></div>
+    <div class="auth-sub">Your 6-month recomposition tracker. Sign in to sync across all your devices.</div>
+    <div class="auth-error" id="auth-error"></div>
+    <div class="auth-label">Email</div>
+    <input class="auth-input" type="email" id="auth-email" placeholder="your@email.com" autocomplete="email" autocapitalize="none">
+    <div class="auth-label">Password</div>
+    <div class="pw-wrap">
+      <input class="auth-input" type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
+      <button class="pw-toggle" type="button" onclick="togglePw()" id="pw-toggle-btn" title="Show password">👁</button>
+    </div>
+    <div class="remember-row">
+      <input type="checkbox" id="remember-me" checked>
+      <label for="remember-me">Keep me signed in</label>
+    </div>
+    <button class="auth-btn" id="auth-btn" onclick="doSignIn()">Sign In</button>
+    <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--text3)">Data syncs across all your devices automatically</div>
+  </div>
+</div>
+
+<!-- CALENDAR DRAWER (mobile) -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="cal-drawer">
+  <div class="drawer-close">
+    <div class="drawer-title">Calendar</div>
+    <div class="drawer-x" onclick="closeDrawer()">×</div>
+  </div>
+  <div style="margin-bottom:20px">
+    <div class="month-nav">
+      <div class="month-label" id="drawer-month-label">March 2026</div>
+      <div style="display:flex;gap:4px">
+        <div class="icon-btn" style="width:28px;height:28px;font-size:13px" onclick="changeMonth(-1)">‹</div>
+        <div class="icon-btn" style="width:28px;height:28px;font-size:13px" onclick="changeMonth(1)">›</div>
+      </div>
+    </div>
+    <div class="week-row" style="margin-bottom:4px">
+      <div class="week-day-header">S</div><div class="week-day-header">M</div><div class="week-day-header">T</div>
+      <div class="week-day-header">W</div><div class="week-day-header">T</div><div class="week-day-header">F</div><div class="week-day-header">S</div>
+    </div>
+    <div id="drawer-cal" class="week-grid"></div>
+  </div>
+  <hr class="sep">
+  <div class="sidebar-label">Streak</div>
+  <div class="streak-card" style="margin-bottom:16px">
+    <div class="streak-num" id="drawer-streak">0</div>
+    <div><div class="streak-text">day streak</div><div class="streak-sub" id="drawer-streak-sub">Start logging</div></div>
+  </div>
+  <div class="sidebar-label">Progress</div>
+  <div id="drawer-rings" class="ring-row"></div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-inner">
+      <div style="display:flex;align-items:center;gap:10px">
+        <!-- Mobile: calendar icon -->
+        <div class="icon-btn mobile-only" onclick="openDrawer()">📅</div>
+        <div class="logo">RECOMP<span>OS</span></div>
+        <div class="week-pill" id="week-pill">Wk 1</div>
+      </div>
+      <div class="header-right">
+        <div class="sync-dot" id="sync-dot"></div>
+        <!-- Desktop nav arrows -->
+        <div class="icon-btn desktop-only" onclick="navigateDay(-1)" style="font-size:18px">‹</div>
+        <div class="icon-btn desktop-only" onclick="navigateDay(1)" style="font-size:18px">›</div>
+        <div class="icon-btn desktop-only" onclick="goToday()" style="font-size:11px;font-family:'DM Mono',monospace;width:auto;padding:0 10px;color:var(--accent)">Today</div>
+        <div class="icon-btn" onclick="doSignOut()" style="font-size:12px;font-family:'DM Mono',monospace;width:auto;padding:0 10px;color:var(--text3)">Sign out</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-body">
+    <!-- DESKTOP SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="month-nav">
+          <div class="month-label" id="sidebar-month-label">March 2026</div>
+          <div style="display:flex;gap:4px">
+            <div class="icon-btn" style="width:24px;height:24px;font-size:12px" onclick="changeMonth(-1)">‹</div>
+            <div class="icon-btn" style="width:24px;height:24px;font-size:12px" onclick="changeMonth(1)">›</div>
+          </div>
+        </div>
+        <div class="week-row" style="margin-bottom:4px">
+          <div class="week-day-header">S</div><div class="week-day-header">M</div><div class="week-day-header">T</div>
+          <div class="week-day-header">W</div><div class="week-day-header">T</div><div class="week-day-header">F</div><div class="week-day-header">S</div>
+        </div>
+        <div id="sidebar-cal" class="week-grid"></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Today's Macros</div>
+        <div id="sidebar-macros"></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Streak</div>
+        <div class="streak-card">
+          <div class="streak-num" id="sidebar-streak">0</div>
+          <div><div class="streak-text">day streak</div><div class="streak-sub" id="sidebar-streak-sub">Start logging</div></div>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">6-Month Progress</div>
+        <div id="sidebar-rings" class="ring-row"></div>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content" id="main-content"></div>
+  </div>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <div class="mobile-nav-bar" id="mobile-nav">
+    <button class="mnb-btn active" id="mnb-today" onclick="mobileTab('today')"><div class="mnb-ico">📋</div><div class="mnb-lbl">Today</div></button>
+    <button class="mnb-btn" id="mnb-prev" onclick="navigateDay(-1)"><div class="mnb-ico">‹</div><div class="mnb-lbl">Prev</div></button>
+    <button class="mnb-btn" id="mnb-next" onclick="navigateDay(1)"><div class="mnb-ico">›</div><div class="mnb-lbl">Next</div></button>
+    <button class="mnb-btn" id="mnb-stats" onclick="mobileTab('stats')"><div class="mnb-ico">📊</div><div class="mnb-lbl">Stats</div></button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getDatabase, ref, set, get, onValue, off } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCgelDTDH0FPb5VwosyIUqoDS62tl_gSm8",
+  authDomain: "fitness-tracker-2961a.firebaseapp.com",
+  databaseURL: "https://fitness-tracker-2961a-default-rtdb.firebaseio.com",
+  projectId: "fitness-tracker-2961a",
+  storageBucket: "fitness-tracker-2961a.firebasestorage.app",
+  messagingSenderId: "882009458031",
+  appId: "1:882009458031:web:13014fee532c28508e149a"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getDatabase(fbApp);
+
+// ══ PLAN DATA ══════════════════════════════════════════════
+const START_DATE = new Date(2026,2,16);
+const PLAN_DAYS = 183;
+const WORKOUT_DAYS = [2,4,6];
+const WR = ['strength','hypertrophy','power'];
+
+const WORKOUTS = {
+  strength: { name:'Day 1 — Strength Focus', dur:'~45 min', warmup:'5 min: leg swings, arm circles, hip hinges, 20 light KB swings',
+    exercises:[
+      {name:'KB Goblet Squat',sets:'4 × 10–12',rest:'75s',note:'KB at chest, knees track toes, chest tall',tag:'Lower'},
+      {name:'DB Romanian Deadlift',sets:'4 × 10–12',rest:'75s',note:'Hip hinge, soft knee, neutral spine',tag:'Posterior'},
+      {name:'DB Bench Press',sets:'3 × 10–12',rest:'60s',note:'Controlled descent, full ROM — floor or bench',tag:'Push'},
+      {name:'DB Bent-Over Row',sets:'3 × 10–12',rest:'60s',note:'Drive elbow back, squeeze lats at top',tag:'Pull'},
+      {name:'KB Overhead Press',sets:'3 × 8–10 / arm',rest:'60s',note:'Standing single-arm, brace core, no lumbar arch',tag:'Push'},
+      {name:'KB Swings (Finisher)',sets:'3 × 20',rest:'45s',note:'Explosive hip drive — not a squat',tag:'Cardio'},
+    ], cardio:'15 min optional steady-state walk or bike after lifting'},
+  hypertrophy: { name:'Day 2 — Hypertrophy + HIIT', dur:'~50 min', warmup:'5 min: jump rope or marching + dynamic stretches',
+    exercises:[
+      {name:'DB Split Squat (RFE)',sets:'3 × 10 / leg',rest:'60s',note:'Rear foot elevated, knee tracks over 2nd toe',tag:'Lower'},
+      {name:'KB Sumo Deadlift',sets:'4 × 10–12',rest:'75s',note:'Wide stance, drive floor away, squeeze glutes at top',tag:'Posterior'},
+      {name:'DB Incline Press',sets:'3 × 10–12',rest:'60s',note:'30–45° incline, upper chest emphasis',tag:'Push'},
+      {name:'KB Renegade Row',sets:'3 × 8 / arm',rest:'60s',note:'Plank position, anti-rotation core work built in',tag:'Pull'},
+      {name:'DB Lateral Raises + Curls',sets:'3 × 12 (superset)',rest:'45s',note:'Light weight, slow tempo — shoulders + biceps',tag:'Arms'},
+      {name:'HIIT Finisher',sets:'4 rounds · 30s on/20s off',rest:'30s between rounds',note:'20 KB swings + 5 burpees per round — keep intensity HIGH',tag:'HIIT'},
+    ], cardio:null},
+  power: { name:'Day 3 — Power + Conditioning', dur:'~55–60 min', warmup:'5 min: KB halos, hip circles, thoracic rotations',
+    exercises:[
+      {name:'KB Clean & Press',sets:'4 × 6–8 / arm',rest:'90s',note:'Explosive clean from hang, press from rack position',tag:'Full Body'},
+      {name:'DB Goblet Squat — Pause',sets:'4 × 8 (2s pause)',rest:'75s',note:'2-second pause at bottom builds time under tension',tag:'Lower'},
+      {name:'DB Push-Up Row',sets:'3 × 8',rest:'60s',note:'Push-up then row each arm — high motor recruitment',tag:'Full Body'},
+      {name:'KB Suitcase Carry',sets:'3 × 30m / arm',rest:'60s',note:'Anti-lateral flexion, oblique and core stability',tag:'Core'},
+      {name:'DB RDL + Row Combo',sets:'3 × 10',rest:'60s',note:'Hinge down → row at bottom → stand up',tag:'Full Body'},
+    ], cardio:'20–30 min Zone 2 steady-state (walk or bike). Conversational pace.'},
+};
+
+const MT = [
+  {name:'Breakfast',time:'6:30 AM',macros:{p:55,c:60,f:15,cal:595},foods:['5 large eggs scrambled (or 2 whole + 4 whites)','1 cup cooked oatmeal (80g dry) + cinnamon','½ cup low-fat cottage cheese on the side','Black coffee or green tea']},
+  {name:'Lunch',time:'12:30 PM',macros:{p:55,c:55,f:15,cal:575},foods:['6 oz lean ground turkey or grilled chicken','1 cup cooked brown rice or sweet potato (200g)','2 cups leafy greens + cucumber + tomatoes','Olive oil + lemon dressing (1 tsp)']},
+  {name:'Pre-Workout Snack',time:'3:30 PM',macros:{p:30,c:40,f:5,cal:325},foods:['1 scoop whey protein in water','1 medium banana','1 rice cake + thin smear almond butter','Eat 60–90 min before training']},
+  {name:'Post-Workout Dinner',time:'7:00 PM',macros:{p:55,c:35,f:20,cal:540},foods:['7 oz salmon or 8 oz white fish (cod/tilapia)','1.5 cups roasted vegetables (broccoli, zucchini, peppers)','½ cup quinoa or small sweet potato','Olive oil, garlic, herbs']},
+  {name:'Evening Snack',time:'9:30 PM',macros:{p:30,c:10,f:10,cal:250},foods:['1 cup 2% or full-fat Greek yogurt (plain)','1 tbsp almond butter or small handful walnuts','Casein-rich — slow digestion overnight']},
+];
+const MR = [
+  {name:'Breakfast',time:'7:00 AM',macros:{p:50,c:35,f:15,cal:475},foods:['4 egg whites + 1 whole egg scrambled','½ cup oatmeal (40g dry) + berries','½ cup cottage cheese on the side','Black coffee or green tea']},
+  {name:'Lunch',time:'12:30 PM',macros:{p:55,c:35,f:15,cal:495},foods:['6 oz grilled chicken or canned tuna in water','1 cup mixed greens + veg + 2 tbsp hummus','½ cup lentils or chickpeas','ACV + olive oil dressing (1 tsp)']},
+  {name:'Afternoon Snack',time:'3:30 PM',macros:{p:30,c:20,f:8,cal:272},foods:['1 scoop whey protein in water','1 medium apple or pear','12 almonds or small handful walnuts']},
+  {name:'Dinner',time:'6:30 PM',macros:{p:55,c:30,f:17,cal:489},foods:['7 oz lean beef (95%) or 8 oz shrimp','2 cups roasted non-starchy veg (broccoli, asparagus)','½ cup black beans or small sweet potato','Season with olive oil, spices, lemon']},
+  {name:'Evening Snack',time:'9:00 PM',macros:{p:25,c:10,f:10,cal:230},foods:['1 cup plain Greek yogurt','1 tbsp nut butter or 10 walnut halves','Cinnamon or vanilla if desired']},
+];
+const PHASES=[
+  {name:'Phase 1 — Foundation',tip:'Focus on form and consistency. Don\'t chase heavy weights yet. Learn the patterns and nail nutrition daily.'},
+  {name:'Phase 2 — Build',tip:'Add weight wherever you\'ve hit the top of the rep range. Log every session. Progress is the goal.'},
+  {name:'Phase 3 — Push',tip:'Increase intensity. Add sets where recovery allows. Consider an optional 4th light cardio session.'},
+  {name:'Phase 4 — Refine',tip:'Dial nutrition. Tighten carb timing. Take progress photos and measurements — compare to Week 1.'},
+  {name:'Phase 5 — Peak',tip:'Advanced territory. Up weights aggressively. Consider a deload at week 20. Sleep is your #1 recovery tool.'},
+  {name:'Phase 6 — Finish Strong',tip:'Final push. Review all progress and set new 6-month targets.'},
+];
+const REST_TIPS=['Walk 20–30 min at an easy pace. Active recovery beats total rest for endomorphs.','Focus on getting 8 hours of sleep tonight. Recovery is where muscle is built.','Foam roll your quads, hamstrings, and thoracic spine for 10 minutes.','Drink an extra glass of water. Hydration drives fat metabolism.','Today\'s job: hit your macros perfectly. Protein especially.','10 min mobility work — hip flexors, shoulders, and ankles.','Keep stress low today — cortisol fights recomp directly.','Easy 20 min bike or walk burns extra calories at low intensity.'];
+
+// ══ STATE ══════════════════════════════════════════════════
+let state={}, currentDate=new Date(), calMonth=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);
+let uid=null, dbListener=null, saveTimer=null, activeTab='workout';
+
+const gk = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const gds = d => { const k=gk(d); if(!state[k]) state[k]={meals:{},exercises:{},notes:'',completed:false}; return state[k]; };
+const dbet = (a,b) => Math.floor((b-a)/86400000);
+const inPlan = d => { const n=dbet(START_DATE,d); return n>=0&&n<PLAN_DAYS; };
+const isWD = d => WORKOUT_DAYS.includes(d.getDay());
+const getWIdx = d => { let c=0; const x=new Date(START_DATE); while(x<d){if(isWD(x))c++;x.setDate(x.getDate()+1);} return c%3; };
+const getW = d => WORKOUTS[WR[getWIdx(d)]];
+const getPhase = d => { const w=Math.floor(dbet(START_DATE,d)/7); if(w<4)return PHASES[0];if(w<8)return PHASES[1];if(w<12)return PHASES[2];if(w<16)return PHASES[3];if(w<22)return PHASES[4];return PHASES[5]; };
+const getWkNum = d => Math.floor(dbet(START_DATE,d)/7)+1;
+const fmtDate = d => { const dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],mn=['January','February','March','April','May','June','July','August','September','October','November','December']; return `${dn[d.getDay()]}, ${mn[d.getMonth()]} ${d.getDate()}`; };
+const calcLogged = d => { const ds=gds(d),meals=isWD(d)?MT:MR; let p=0,c=0,f=0,cal=0; meals.forEach((m,i)=>{if(ds.meals[i]){p+=m.macros.p;c+=m.macros.c;f+=m.macros.f;cal+=m.macros.cal;}}); return {p,c,f,cal}; };
+const calcTarget = d => isWD(d)?{p:220,c:220,f:65,cal:2400}:{p:220,c:130,f:65,cal:2100};
+const calcStreak = () => { let s=0; const d=new Date(currentDate); d.setDate(d.getDate()-1); while(inPlan(d)){if(state[gk(d)]?.completed){s++;d.setDate(d.getDate()-1);}else break;} return s; };
+const totalLogged = () => Object.values(state).filter(d=>d.completed).length;
+
+function setSyncing(s) {
+  const dot=document.getElementById('sync-dot');
+  if(!dot) return;
+  dot.className='sync-dot'+(s==='syncing'?' syncing':s==='error'?' error':'');
+}
+
+function save() {
+  if(!uid) return;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async()=>{
+    setSyncing('syncing');
+    try{ await set(ref(db,`users/${uid}/data`),state); setSyncing('synced'); }
+    catch(e){ setSyncing('error'); }
+  },600);
+}
+
+// ══ RENDER ═════════════════════════════════════════════════
+function renderAll() { renderHeader(); renderCals(); renderSidebarMacros(); renderStreaks(); renderRings(); renderContent(); }
+
+function renderHeader() {
+  const wn=Math.max(1,Math.min(getWkNum(currentDate),26));
+  document.getElementById('week-pill').textContent=`Wk ${wn}`;
+}
+
+function renderCals() {
+  ['sidebar-cal','drawer-cal'].forEach(id => {
+    const el=document.getElementById(id); if(!el) return;
+    const yr=calMonth.getFullYear(),mo=calMonth.getMonth();
+    const lbl=id==='sidebar-cal'?'sidebar-month-label':'drawer-month-label';
+    document.getElementById(lbl).textContent=new Date(yr,mo,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+    const first=new Date(yr,mo,1).getDay(), dim=new Date(yr,mo+1,0).getDate(), today=new Date();
+    let cells=[]; for(let i=0;i<first;i++) cells.push(null); for(let d=1;d<=dim;d++) cells.push(new Date(yr,mo,d));
+    while(cells.length%7!==0) cells.push(null);
+    let html='';
+    cells.forEach((d,i)=>{
+      if(i%7===0) html+='<div class="week-row">';
+      if(!d){html+='<div class="day-cell" style="opacity:0;pointer-events:none"></div>';}
+      else{
+        const k=gk(d),isT=d.toDateString()===today.toDateString(),isSel=d.toDateString()===currentDate.toDateString();
+        const wo=inPlan(d)&&isWD(d),logged=state[k]?.completed;
+        let cls='day-cell'; if(isT)cls+=' today'; if(isSel)cls+=' selected'; if(wo)cls+=' workout-marker'; if(logged)cls+=' logged';
+        html+=`<div class="${cls}" onclick="window._sel(${d.getFullYear()},${d.getMonth()},${d.getDate()})">${d.getDate()}<div class="dot"></div></div>`;
+      }
+      if((i+1)%7===0) html+='</div>';
+    });
+    el.innerHTML=html;
+  });
+}
+
+function renderSidebarMacros() {
+  const el=document.getElementById('sidebar-macros'); if(!el) return;
+  const lg=calcLogged(currentDate),tg=calcTarget(currentDate);
+  el.innerHTML=[{lbl:'Protein',cur:lg.p,tgt:tg.p,col:'#60a5fa'},{lbl:'Carbs',cur:lg.c,tgt:tg.c,col:'#fbbf24'},{lbl:'Fat',cur:lg.f,tgt:tg.f,col:'#4ade80'},{lbl:'Calories',cur:lg.cal,tgt:tg.cal,col:'#f472b6'}].map(it=>{
+    const pct=Math.min(100,Math.round(it.cur/it.tgt*100));
+    return `<div class="mp-row"><div class="mp-lbl">${it.lbl}</div><div class="mp-bar-wrap"><div class="mp-bar" style="width:${pct}%;background:${it.col}"></div></div><div class="mp-nums"><span>${it.cur}</span>/${it.tgt}</div></div>`;
+  }).join('');
+}
+
+function renderStreaks() {
+  const s=calcStreak(), sub=s===0?'Start logging':s===1?'1 day completed':`${s} days in a row`;
+  ['sidebar-streak','drawer-streak'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=s;});
+  ['sidebar-streak-sub','drawer-streak-sub'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=sub;});
+}
+
+function renderRings() {
+  ['sidebar-rings','drawer-rings'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    const total=PLAN_DAYS, done=totalLogged();
+    const wkTot=Array.from({length:PLAN_DAYS},(_,i)=>{const d=new Date(START_DATE);d.setDate(d.getDate()+i);return d;}).filter(isWD).length;
+    const wkDone=Object.entries(state).filter(([k,v])=>{const[yr,mo,da]=k.split('-').map(Number);return isWD(new Date(yr,mo-1,da))&&v.completed;}).length;
+    el.innerHTML=[{label:'Days',val:done,max:total,color:'#7c6af7'},{label:'Workouts',val:wkDone,max:wkTot,color:'#4ade80'}].map(r=>{
+      const pct=r.max>0?r.val/r.max:0,circ=2*Math.PI*16,dash=circ*pct;
+      return `<div class="ring-card"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="16" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4"/><circle cx="22" cy="22" r="16" fill="none" stroke="${r.color}" stroke-width="4" stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" fill="${r.color}" font-family="'DM Mono',monospace" font-size="9" font-weight="500">${r.val}</text></svg><div class="ring-label">${r.label}</div><div class="ring-val">${Math.round(pct*100)}%</div></div>`;
+    }).join('');
+  });
+}
+
+function renderContent() {
+  const content=document.getElementById('main-content');
+  const wo=isWD(currentDate), ip=inPlan(currentDate);
+  const ds=gds(currentDate), tg=calcTarget(currentDate), phase=getPhase(currentDate);
+  const wn=getWkNum(currentDate), isMobile=window.innerWidth<768;
+
+  // Week strip
+  let html=buildWeekStrip();
+
+  // Day header
+  html+=`<div class="day-header">
+    <div class="day-overline">${ip?`Week ${Math.max(1,Math.min(wn,26))} · Day ${Math.max(1,dbet(START_DATE,currentDate)+1)}`:'Outside Plan'}</div>
+    <div class="day-title">${fmtDate(currentDate)}</div>
+    <div><span class="day-badge ${wo?'badge-workout':'badge-rest'}">${wo?'● Training Day':'● Rest Day'}</span></div>
+    ${ip?`<div class="phase-tip">${phase.tip}</div>`:''}
+  </div>`;
+
+  if(!ip){ html+=`<div class="rest-card" style="text-align:center"><div style="font-size:32px;margin-bottom:8px">📅</div><div class="rest-ttl">Outside Plan</div><div class="rest-body">This date is outside your 6-month plan (March 16 – September 14, 2026). Navigate to a plan date to log progress.</div></div>`; content.innerHTML=html; return; }
+
+  // Macro bar (always shown)
+  const lg=calcLogged(currentDate);
+  html+=`<div class="card">
+    <div class="card-hd"><div class="card-hd-left"><span class="card-ico">📊</span><span class="card-ttl">Daily Targets</span></div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">${wo?'Training day':'Rest day'}</div></div>
+    <div class="card-bd">
+      <div class="macro-chips">
+        <div class="mc cal"><div class="mc-val">${tg.cal}</div><div class="mc-lbl">kcal</div></div>
+        <div class="mc pro"><div class="mc-val">${tg.p}g</div><div class="mc-lbl">protein</div></div>
+        <div class="mc carb"><div class="mc-val">${tg.c}g</div><div class="mc-lbl">carbs</div></div>
+        <div class="mc fat"><div class="mc-val">${tg.f}g</div><div class="mc-lbl">fat</div></div>
+      </div>
+      ${[{lbl:'Protein',cur:lg.p,tgt:tg.p,col:'#60a5fa'},{lbl:'Carbs',cur:lg.c,tgt:tg.c,col:'#fbbf24'},{lbl:'Fat',cur:lg.f,tgt:tg.f,col:'#4ade80'},{lbl:'Calories',cur:lg.cal,tgt:tg.cal,col:'#f472b6'}].map(it=>{
+        const pct=Math.min(100,Math.round(it.cur/it.tgt*100));
+        return `<div class="mp-row"><div class="mp-lbl">${it.lbl}</div><div class="mp-bar-wrap"><div class="mp-bar" style="width:${pct}%;background:${it.col}"></div></div><div class="mp-nums"><span>${it.cur}</span>/${it.tgt}g</div></div>`;
+      }).join('')}
+    </div>
+  </div>`;
+
+  // TABS (mobile) or grid (desktop)
+  if(isMobile){
+    const tabs=wo?[{id:'workout',lbl:'🏋️ Workout'},{id:'meals',lbl:'🍽️ Meals'},{id:'notes',lbl:'📝 Notes'}]:[{id:'meals',lbl:'🍽️ Meals'},{id:'notes',lbl:'📝 Notes'}];
+    if(wo){
+      html+=`<div class="tab-bar">${tabs.map(t=>`<button class="tab-btn${activeTab===t.id?' active':''}" onclick="window._setTab('${t.id}')">${t.lbl}</button>`).join('')}</div>`;
+      html+=`<div class="tab-panel${activeTab==='workout'?' active':''}" id="tp-workout">${buildWorkout(ds)}</div>`;
+      html+=`<div class="tab-panel${activeTab==='meals'?' active':''}" id="tp-meals">${buildMeals(ds,wo)}</div>`;
+      html+=`<div class="tab-panel${activeTab==='notes'?' active':''}" id="tp-notes">${buildNotes(ds)}</div>`;
+    } else {
+      html+=`<div class="tab-bar">${tabs.map(t=>`<button class="tab-btn${activeTab==='meals'&&t.id==='meals'||activeTab==='notes'&&t.id==='notes'?' active':t.id==='meals'&&activeTab==='workout'?' active':''}" onclick="window._setTab('${t.id}')">${t.lbl}</button>`).join('')}</div>`;
+      html+=`<div class="tab-panel${activeTab!=='notes'?' active':''}" id="tp-meals">${buildRestDay()}${buildMeals(ds,wo)}</div>`;
+      html+=`<div class="tab-panel${activeTab==='notes'?' active':''}" id="tp-notes">${buildNotes(ds)}</div>`;
+    }
+  } else {
+    // Desktop: two column grid
+    html+=`<div class="desktop-grid">`;
+    if(wo){ html+=buildWorkout(ds); }
+    else { html+=buildRestDay(); }
+    html+=buildMeals(ds,wo,'span2');
+    html+=buildNotes(ds,'span2');
+    html+=`</div>`;
+  }
+
+  content.innerHTML=html;
+}
+
+function buildWeekStrip(){
+  const dow=currentDate.getDay(), ws=new Date(currentDate); ws.setDate(currentDate.getDate()-dow);
+  const dn=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], today=new Date();
+  let h='<div class="week-strip">';
+  for(let i=0;i<7;i++){
+    const d=new Date(ws); d.setDate(ws.getDate()+i);
+    const isT=d.toDateString()===today.toDateString(),isSel=d.toDateString()===currentDate.toDateString();
+    const wo=isWD(d)&&inPlan(d),hl=state[gk(d)]?.completed;
+    let cls='ws-cell'; if(isT)cls+=' today'; if(isSel)cls+=' selected'; cls+=wo?' workout-day':' rest-day'; if(hl)cls+=' has-log';
+    h+=`<div class="${cls}" onclick="window._sel(${d.getFullYear()},${d.getMonth()},${d.getDate()})"><div class="ws-day">${dn[i]}</div><div class="ws-num">${d.getDate()}</div><div class="ws-type">${wo?'Workout':'Rest'}</div><div class="ws-dot"></div></div>`;
+  }
+  return h+'</div>';
+}
+
+function buildWorkout(ds){
+  const w=getWorkout(currentDate), wTime=currentDate.getDay()===6?'8:00 AM – 1:00 PM':'7:00 AM';
+  let h=`<div class="card"><div class="card-hd"><div class="card-hd-left"><span class="card-ico">🏋️</span><span class="card-ttl">${w.name}</span></div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">${wTime} · ${w.dur}</div></div><div class="card-bd">
+    <div class="warmup-bar"><strong style="color:var(--text2);font-weight:500">Warm-up:</strong> ${w.warmup}</div>`;
+  w.exercises.forEach((ex,i)=>{
+    const xs=ds.exercises[i]||{}, ld=xs.logged;
+    h+=`<div class="ex-item${ld?' logged':''}" id="ex-${i}">
+      <div class="ex-row"><div class="ex-name">${ex.name}</div><span class="ex-tag">${ex.tag}</span></div>
+      <div class="ex-sets">${ex.sets} · Rest ${ex.rest}</div>
+      <div class="ex-note">${ex.note}</div>
+      <div class="ex-inputs">
+        <input class="ex-input" id="ew-${i}" placeholder="Weight (lbs/kg)" value="${xs.weight||''}" oninput="window._ew(${i},this.value)">
+        <input class="ex-input" id="er-${i}" placeholder="Actual reps" value="${xs.reps||''}" oninput="window._er(${i},this.value)">
+      </div>
+      <button class="ex-log-btn" onclick="window._tex(${i})">${ld?'✓ Done':'Log Set'}</button>
+    </div>`;
+  });
+  if(w.cardio) h+=`<div class="cardio-bar"><div class="cardio-ttl">Cardio Finisher</div><div class="cardio-desc">${w.cardio}</div></div>`;
+  h+='</div></div>';
+  return h;
+}
+
+function buildMeals(ds,wo,cls=''){
+  const meals=wo?MT:MR;
+  let h=`<div class="card${cls?' '+cls:''}"><div class="card-hd"><div class="card-hd-left"><span class="card-ico">🍽️</span><span class="card-ttl">Meal Plan — ${wo?'Training Day':'Rest Day'}</span></div><div style="font-size:11px;color:var(--text3)">Tap when eaten</div></div><div class="card-bd">`;
+  meals.forEach((m,i)=>{
+    const ld=ds.meals[i];
+    h+=`<div class="meal-item${ld?' logged':''}" id="meal-${i}">
+      <div class="meal-row"><div class="meal-name">${m.name}</div><div class="meal-time">${m.time}</div></div>
+      <div class="meal-pills"><span class="mpill p">${m.macros.p}g P</span><span class="mpill c">${m.macros.c}g C</span><span class="mpill f">${m.macros.f}g F</span><span class="mpill k">${m.macros.cal} kcal</span></div>
+      <ul class="food-list">${m.foods.map(f=>`<li>${f}</li>`).join('')}</ul>
+      <button class="log-btn" onclick="window._tm(${i})">${ld?'✓ Logged':'Mark as eaten'}</button>
+    </div>`;
+  });
+  h+='</div></div>';
+  return h;
+}
+
+function buildRestDay(){
+  const tipIdx=dbet(START_DATE,currentDate)%REST_TIPS.length;
+  return `<div class="rest-card">
+    <div class="rest-ttl">Active Recovery Day</div>
+    <div class="rest-body">Your muscles are repairing and growing. Eat your macros (lower carb today), sleep well, and move gently.</div>
+    <div class="rest-tip"><strong style="font-weight:500;color:var(--text)">Recovery tip:</strong> ${REST_TIPS[tipIdx]}</div>
+  </div>`;
+}
+
+function buildNotes(ds,cls=''){
+  return `<div class="card${cls?' '+cls:''}"><div class="card-hd"><div class="card-hd-left"><span class="card-ico">📝</span><span class="card-ttl">Notes & Completion</span></div></div><div class="card-bd">
+    <textarea class="notes-area" id="day-notes" placeholder="How did you feel? PRs? Energy levels? Anything notable...">${ds.notes||''}</textarea>
+    <div style="display:flex;align-items:center">
+      <button class="save-btn" onclick="window._sn()">Save notes</button>
+      <span class="saved-flash" id="saved-flash">Saved ✓</span>
+    </div>
+    <button class="complete-btn${ds.completed?' done':''}" id="complete-btn" onclick="window._tc()">${ds.completed?'✓ Day Completed!':'Mark Day Complete'}</button>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center">Marks this day in your streak</div>
+  </div></div>`;
+}
+
+// ══ ACTIONS ════════════════════════════════════════════════
+window._sel = (y,m,d) => { currentDate=new Date(y,m,d); if(currentDate.getMonth()!==calMonth.getMonth()||currentDate.getFullYear()!==calMonth.getFullYear()) calMonth=new Date(currentDate.getFullYear(),currentDate.getMonth(),1); closeDrawer(); renderAll(); };
+window.navigateDay = dir => { currentDate.setDate(currentDate.getDate()+dir); if(currentDate.getMonth()!==calMonth.getMonth()) calMonth=new Date(currentDate.getFullYear(),currentDate.getMonth(),1); renderAll(); };
+window.changeMonth = dir => { calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()+dir,1); renderCals(); };
+window.goToday = () => { currentDate=new Date(); calMonth=new Date(currentDate.getFullYear(),currentDate.getMonth(),1); renderAll(); };
+window.mobileTab = tab => { if(tab==='today') goToday(); else if(tab==='stats') openDrawer(); ['mnb-today','mnb-stats'].forEach(id=>document.getElementById(id)?.classList.remove('active')); if(tab==='today') document.getElementById('mnb-today')?.classList.add('active'); else document.getElementById('mnb-stats')?.classList.add('active'); };
+window._setTab = tab => { activeTab=tab; renderContent(); };
+window._tm = idx => { const ds=gds(currentDate); ds.meals[idx]=!ds.meals[idx]; save(); renderAll(); };
+window._tex = idx => {
+  const ds=gds(currentDate); if(!ds.exercises[idx]) ds.exercises[idx]={};
+  ds.exercises[idx].logged=!ds.exercises[idx].logged; save();
+  const el=document.getElementById(`ex-${idx}`); if(el){ el.classList.toggle('logged',ds.exercises[idx].logged); const btn=el.querySelector('.ex-log-btn'); if(btn) btn.textContent=ds.exercises[idx].logged?'✓ Done':'Log Set'; }
+  renderSidebarMacros();
+};
+window._ew = (i,v) => { const ds=gds(currentDate); if(!ds.exercises[i]) ds.exercises[i]={}; ds.exercises[i].weight=v; save(); };
+window._er = (i,v) => { const ds=gds(currentDate); if(!ds.exercises[i]) ds.exercises[i]={}; ds.exercises[i].reps=v; save(); };
+window._sn = () => { const el=document.getElementById('day-notes'); if(!el) return; gds(currentDate).notes=el.value; save(); const f=document.getElementById('saved-flash'); if(f){f.style.opacity='1';setTimeout(()=>f.style.opacity='0',1500);} };
+window._tc = () => { const ds=gds(currentDate); ds.completed=!ds.completed; save(); renderAll(); };
+window.openDrawer = () => { document.getElementById('cal-drawer').classList.add('open'); document.getElementById('drawer-overlay').classList.add('open'); };
+window.closeDrawer = () => { document.getElementById('cal-drawer').classList.remove('open'); document.getElementById('drawer-overlay').classList.remove('open'); };
+
+// ══ AUTH ═══════════════════════════════════════════════════
+window.togglePw = () => {
+  const input=document.getElementById('auth-password'), btn=document.getElementById('pw-toggle-btn');
+  if(input.type==='password'){ input.type='text'; btn.textContent='🙈'; btn.title='Hide password'; }
+  else { input.type='password'; btn.textContent='👁'; btn.title='Show password'; }
+};
+
+window.doSignIn = async () => {
+  const email=document.getElementById('auth-email').value.trim(), pw=document.getElementById('auth-password').value;
+  const remember=document.getElementById('remember-me').checked;
+  const errEl=document.getElementById('auth-error'), btn=document.getElementById('auth-btn');
+  errEl.style.display='none'; btn.disabled=true; btn.textContent='Signing in…';
+  try {
+    await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+    await signInWithEmailAndPassword(auth,email,pw);
+  }
+  catch(e) { errEl.textContent=e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'||e.code==='auth/user-not-found'?'Incorrect email or password.':'Sign in failed. Please try again.'; errEl.style.display='block'; btn.disabled=false; btn.textContent='Sign In'; }
+};
+
+window.doSignOut = async () => {
+  if(dbListener){off(ref(db,`users/${uid}/data`));dbListener=null;}
+  await fbSignOut(auth);
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('auth-btn').disabled=false; document.getElementById('auth-btn').textContent='Sign In';
+  state={};
+};
+
+document.getElementById('auth-password').addEventListener('keydown',e=>{if(e.key==='Enter')window.doSignIn();});
+document.getElementById('auth-email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('auth-password').focus();});
+
+onAuthStateChanged(auth, async user => {
+  document.getElementById('loading-screen').style.display='none';
+  if(user){
+    uid=user.uid;
+    document.getElementById('auth-screen').style.display='none';
+    document.getElementById('app').classList.add('visible');
+    setSyncing('syncing');
+    const snap=await get(ref(db,`users/${uid}/data`));
+    if(snap.exists()) state=snap.val()||{};
+    setSyncing('synced');
+    const today=new Date();
+    currentDate=today<START_DATE?new Date(START_DATE):today;
+    calMonth=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);
+    activeTab=isWD(currentDate)?'workout':'meals';
+    renderAll();
+    dbListener=onValue(ref(db,`users/${uid}/data`),snap=>{if(snap.exists()){state=snap.val()||{};renderSidebarMacros();renderCals();renderStreaks();renderRings();}});
+  } else {
+    document.getElementById('auth-screen').style.display='flex';
+  }
+});
+</script>
+</body>
+</html>
