@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RecompOS — Synced Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0f0f11;
+    --bg2: #161619;
+    --bg3: #1e1e23;
+    --bg4: #26262d;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8e8ec;
+    --text2: #9898a8;
+    --text3: #5a5a6e;
+    --accent: #7c6af7;
+    --accent2: #5b4fd4;
+    --green: #4ade80;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --teal: #2dd4bf;
+    --pink: #f472b6;
+    --protein-color: #60a5fa;
+    --carb-color: #fbbf24;
+    --fat-color: #4ade80;
+    --cal-color: #f472b6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+  /* AUTH SCREEN */
+  .auth-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .auth-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+  }
+  .auth-logo { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 24px; letter-spacing: -0.03em; margin-bottom: 8px; }
+  .auth-logo span { color: var(--accent); }
+  .auth-sub { font-size: 13px; color: var(--text3); margin-bottom: 32px; }
+  .auth-label { font-family: 'DM Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); margin-bottom: 6px; }
+  .auth-input {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    margin-bottom: 16px;
+    transition: border-color .15s;
+  }
+  .auth-input:focus { border-color: var(--accent); }
+  .auth-btn {
+    width: 100%;
+    padding: 13px;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+    margin-top: 4px;
+  }
+  .auth-btn:hover { background: var(--accent2); }
+  .auth-btn:disabled { opacity: 0.5; cursor: default; }
+  .auth-error {
+    background: rgba(248,113,113,0.1);
+    border: 1px solid rgba(248,113,113,0.3);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--red);
+    margin-bottom: 16px;
+    display: none;
+  }
+  .auth-loading { text-align: center; color: var(--text3); font-size: 13px; padding: 20px; }
+  .sync-indicator {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3);
+  }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  .sync-dot.syncing { background: var(--amber); animation: pulse 1s infinite; }
+  .sync-dot.error { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* HEADER */
+  .header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; letter-spacing: -0.02em; }
+  .logo span { color: var(--accent); }
+  .week-badge { font-family: 'DM Mono', monospace; font-size: 11px; background: var(--bg4); border: 1px solid var(--border2); border-radius: 20px; padding: 3px 10px; color: var(--text2); }
+  .nav-arrows { display: flex; gap: 4px; }
+  .nav-btn { width: 32px; height: 32px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; color: var(--text2); font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+  .nav-btn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
+  .today-btn { font-family: 'DM Mono', monospace; font-size: 11px; background: var(--accent); border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer; color: #fff; font-weight: 500; transition: all .15s; }
+  .today-btn:hover { background: var(--accent2); }
+  .signout-btn { font-family: 'DM Mono', monospace; font-size: 11px; background: transparent; border: 1px solid var(--border2); border-radius: 6px; padding: 6px 12px; cursor: pointer; color: var(--text3); transition: all .15s; }
+  .signout-btn:hover { border-color: var(--red); color: var(--red); }
+  .phase-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-family: 'DM Mono', monospace; font-size: 10px; background: var(--bg4); border: 1px solid var(--border2); color: var(--text2); }
+
+  /* MAIN */
+  .main { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 60px); }
+
+  /* SIDEBAR */
+  .sidebar { background: var(--bg2); border-right: 1px solid var(--border); padding: 20px 16px; overflow-y: auto; height: calc(100vh - 60px); position: sticky; top: 60px; }
+  .sidebar-section { margin-bottom: 24px; }
+  .sidebar-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .1em; color: var(--text3); text-transform: uppercase; margin-bottom: 8px; padding: 0 4px; }
+  .week-grid { display: flex; flex-direction: column; gap: 2px; }
+  .week-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .week-day-header { text-align: center; font-family: 'DM Mono', monospace; font-size: 9px; color: var(--text3); padding: 4px 0; }
+  .day-cell { aspect-ratio: 1; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); background: var(--bg3); border: 1px solid transparent; transition: all .12s; position: relative; }
+  .day-cell:hover { border-color: var(--border2); color: var(--text); }
+  .day-cell.today { border-color: var(--accent); color: var(--accent); background: rgba(124,106,247,0.1); }
+  .day-cell.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .day-cell .dot { width: 3px; height: 3px; border-radius: 50%; position: absolute; bottom: 3px; background: var(--green); display: none; }
+  .day-cell.logged .dot { display: block; }
+  .day-cell.workout-marker::after { content: ''; width: 3px; height: 3px; border-radius: 50%; position: absolute; top: 3px; background: var(--accent); }
+  .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .month-label { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; }
+  .ring-row { display: flex; gap: 8px; }
+  .ring-card { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 10px 8px; text-align: center; }
+  .ring-card svg { width: 44px; height: 44px; }
+  .ring-label { font-size: 10px; color: var(--text3); margin-top: 4px; font-family: 'DM Mono', monospace; }
+  .ring-val { font-size: 11px; font-weight: 500; color: var(--text); }
+  .streak-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; align-items: center; gap: 12px; }
+  .streak-num { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 700; color: var(--amber); line-height: 1; }
+  .streak-text { font-size: 12px; color: var(--text2); }
+  .streak-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .mp-row { display: grid; grid-template-columns: 60px 1fr 80px; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .mp-lbl { font-size: 11px; color: var(--text2); font-family: 'DM Mono', monospace; }
+  .mp-bar-wrap { background: var(--bg4); border-radius: 4px; height: 5px; }
+  .mp-bar { height: 5px; border-radius: 4px; transition: width .4s ease; }
+  .mp-nums { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); text-align: right; }
+  .mp-nums span { color: var(--text); }
+
+  /* CONTENT */
+  .content { padding: 24px; overflow-y: auto; }
+  .week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 24px; }
+  .ws-cell { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 6px; text-align: center; cursor: pointer; transition: all .15s; }
+  .ws-cell:hover { border-color: var(--border2); }
+  .ws-cell.selected { border-color: var(--accent); background: rgba(124,106,247,0.08); }
+  .ws-cell.today { border-color: rgba(124,106,247,0.5); }
+  .ws-day { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--text3); margin-bottom: 2px; }
+  .ws-num { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; }
+  .ws-type { font-size: 9px; color: var(--text3); margin-top: 2px; }
+  .ws-cell.workout-day .ws-type { color: var(--accent); }
+  .ws-cell.rest-day .ws-type { color: var(--teal); }
+  .ws-logged-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); margin: 3px auto 0; opacity: 0; }
+  .ws-cell.has-log .ws-logged-dot { opacity: 1; }
+  .day-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+  .day-title { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+  .day-type-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; margin-top: 8px; }
+  .badge-workout { background: rgba(124,106,247,0.15); color: var(--accent); border: 1px solid rgba(124,106,247,0.3); }
+  .badge-rest { background: rgba(45,212,191,0.1); color: var(--teal); border: 1px solid rgba(45,212,191,0.2); }
+  .overline { font-family: 'DM Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--text3); margin-bottom: 4px; }
+  .tip-inline { background: var(--bg3); border-left: 2px solid var(--accent); border-radius: 0 8px 8px 0; padding: 8px 12px; font-size: 12px; color: var(--text2); margin-top: 10px; line-height: 1.6; }
+
+  /* CARDS */
+  .day-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .card-header { padding: 14px 16px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .card-title-row { display: flex; align-items: center; gap: 8px; }
+  .card-icon { font-size: 16px; }
+  .card-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+  .card-body { padding: 16px; }
+  .card-span { grid-column: 1 / -1; }
+  .macro-target-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+  .macro-chip { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 10px 8px; text-align: center; }
+  .macro-chip-val { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; }
+  .macro-chip-lbl { font-size: 10px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
+  .macro-chip.cal .macro-chip-val { color: var(--cal-color); }
+  .macro-chip.pro .macro-chip-val { color: var(--protein-color); }
+  .macro-chip.carb .macro-chip-val { color: var(--carb-color); }
+  .macro-chip.fat .macro-chip-val { color: var(--fat-color); }
+  .macro-progress { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+
+  /* MEALS */
+  .meal-item { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px; transition: border-color .15s; }
+  .meal-item.logged { border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.04); }
+  .meal-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .meal-name { font-weight: 500; font-size: 13px; }
+  .meal-time { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); }
+  .meal-macros-small { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .m-pill { font-family: 'DM Mono', monospace; font-size: 9px; padding: 2px 6px; border-radius: 4px; border: 1px solid; }
+  .m-pill.p { border-color: rgba(96,165,250,0.3); color: var(--protein-color); background: rgba(96,165,250,0.08); }
+  .m-pill.c { border-color: rgba(251,191,36,0.3); color: var(--carb-color); background: rgba(251,191,36,0.08); }
+  .m-pill.f { border-color: rgba(74,222,128,0.3); color: var(--fat-color); background: rgba(74,222,128,0.08); }
+  .m-pill.cal { border-color: rgba(244,114,182,0.3); color: var(--cal-color); background: rgba(244,114,182,0.08); }
+  .food-items { font-size: 11px; color: var(--text3); line-height: 1.6; margin-bottom: 8px; list-style: none; }
+  .food-items li { padding-left: 10px; position: relative; }
+  .food-items li::before { content: '—'; position: absolute; left: 0; color: var(--text3); }
+  .log-meal-btn { width: 100%; padding: 7px; border-radius: 7px; border: 1px solid var(--border2); background: transparent; color: var(--text2); font-family: 'DM Mono', monospace; font-size: 10px; cursor: pointer; transition: all .15s; }
+  .log-meal-btn:hover { background: var(--bg4); color: var(--text); }
+  .meal-item.logged .log-meal-btn { background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.3); color: var(--green); }
+
+  /* EXERCISES */
+  .exercise-item { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px; transition: border-color .15s; margin-bottom: 8px; }
+  .exercise-item.logged { border-color: rgba(124,106,247,0.4); background: rgba(124,106,247,0.05); }
+  .ex-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .ex-name { font-weight: 500; font-size: 13px; }
+  .ex-tag { font-family: 'DM Mono', monospace; font-size: 9px; padding: 2px 7px; border-radius: 4px; background: rgba(124,106,247,0.15); color: var(--accent); border: 1px solid rgba(124,106,247,0.3); }
+  .ex-sets { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text2); margin-bottom: 3px; }
+  .ex-note { font-size: 11px; color: var(--text3); margin-bottom: 8px; }
+  .ex-log-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: center; }
+  .ex-input { padding: 6px 8px; background: var(--bg4); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px; outline: none; width: 100%; transition: border-color .15s; }
+  .ex-input:focus { border-color: var(--accent); }
+  .ex-input::placeholder { color: var(--text3); }
+  .ex-log-btn { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--accent); background: rgba(124,106,247,0.15); color: var(--accent); font-family: 'DM Mono', monospace; font-size: 10px; cursor: pointer; white-space: nowrap; transition: all .15s; }
+  .ex-log-btn:hover { background: var(--accent); color: #fff; }
+  .exercise-item.logged .ex-log-btn { background: var(--accent); color: #fff; }
+  .cardio-block { background: var(--bg3); border: 1px solid rgba(45,212,191,0.2); border-radius: 10px; padding: 12px; margin-top: 10px; }
+  .cardio-title { font-size: 13px; font-weight: 500; color: var(--teal); margin-bottom: 4px; }
+  .cardio-desc { font-size: 12px; color: var(--text2); line-height: 1.6; }
+  .rest-banner { background: var(--bg3); border: 1px solid var(--border); border-radius: 14px; padding: 24px; text-align: center; }
+  .rest-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 600; margin-bottom: 6px; color: var(--teal); }
+  .rest-tip { font-size: 13px; color: var(--text2); line-height: 1.6; max-width: 400px; margin: 0 auto; }
+  .notes-area { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; resize: vertical; min-height: 70px; outline: none; transition: border-color .15s; }
+  .notes-area:focus { border-color: var(--border2); }
+  .save-notes-btn { margin-top: 8px; padding: 7px 16px; border-radius: 7px; border: 1px solid var(--border2); background: var(--bg4); color: var(--text2); font-family: 'DM Mono', monospace; font-size: 10px; cursor: pointer; transition: all .15s; }
+  .save-notes-btn:hover { background: var(--bg3); color: var(--text); }
+  .saved-flash { color: var(--green); font-family: 'DM Mono', monospace; font-size: 10px; margin-left: 8px; opacity: 0; transition: opacity .3s; }
+  .complete-day-btn { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid rgba(74,222,128,0.3); background: rgba(74,222,128,0.08); color: var(--green); font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; transition: all .15s; margin-top: 4px; }
+  .complete-day-btn:hover { background: rgba(74,222,128,0.15); }
+  .complete-day-btn.completed { background: var(--green); color: #0f0f11; font-weight: 500; cursor: default; }
+
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">RECOMP<span>OS</span></div>
+    <div class="auth-sub">Your 6-month recomposition tracker — sign in to sync across all your devices</div>
+    <div class="auth-error" id="auth-error"></div>
+    <div class="auth-label">Email</div>
+    <input class="auth-input" type="email" id="auth-email" placeholder="your@email.com" autocomplete="email">
+    <div class="auth-label">Password</div>
+    <input class="auth-input" type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
+    <button class="auth-btn" id="auth-btn" onclick="signIn()">Sign In</button>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--text3)">Your data syncs automatically across all devices</div>
+  </div>
+</div>
+
+<!-- MAIN APP (hidden until auth) -->
+<div id="app" style="display:none">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">RECOMP<span>OS</span></div>
+      <div class="week-badge" id="week-badge">Week 1</div>
+      <div class="phase-badge" id="phase-badge">Phase 1 — Foundation</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="sync-indicator"><div class="sync-dot" id="sync-dot"></div><span id="sync-label">Synced</span></div>
+      <div class="nav-arrows">
+        <button class="nav-btn" onclick="navigateDay(-1)">‹</button>
+        <button class="nav-btn" onclick="navigateDay(1)">›</button>
+      </div>
+      <button class="today-btn" onclick="goToday()">Today</button>
+      <button class="signout-btn" onclick="signOut()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="month-nav">
+          <div class="month-label" id="month-label">March 2026</div>
+          <div style="display:flex;gap:4px">
+            <button class="nav-btn" style="width:24px;height:24px;font-size:12px" onclick="changeMonth(-1)">‹</button>
+            <button class="nav-btn" style="width:24px;height:24px;font-size:12px" onclick="changeMonth(1)">›</button>
+          </div>
+        </div>
+        <div class="week-row" style="margin-bottom:4px">
+          <div class="week-day-header">S</div><div class="week-day-header">M</div><div class="week-day-header">T</div>
+          <div class="week-day-header">W</div><div class="week-day-header">T</div><div class="week-day-header">F</div><div class="week-day-header">S</div>
+        </div>
+        <div id="mini-cal" class="week-grid"></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Today's Macros</div>
+        <div id="sidebar-macros"></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Streak</div>
+        <div class="streak-card">
+          <div class="streak-num" id="streak-num">0</div>
+          <div><div class="streak-text">day streak</div><div class="streak-sub" id="streak-sub">Start logging to build your streak</div></div>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">6-Month Progress</div>
+        <div id="progress-rings" class="ring-row"></div>
+      </div>
+    </div>
+    <div class="content" id="main-content"></div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getDatabase, ref, set, get, onValue, off } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC0jQXQ32dpiH3sJe8ZZOjPLfPuhMvp7dA",
+  authDomain: "fitness-tracker-2961a.firebaseapp.com",
+  databaseURL: "https://fitness-tracker-2961a-default-rtdb.firebaseio.com",
+  projectId: "fitness-tracker-2961a",
+  storageBucket: "fitness-tracker-2961a.firebasestorage.app",
+  messagingSenderId: "882009458031",
+  appId: "1:882009458031:web:13014fee532c28508e149a"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+// ── PLAN DATA ──────────────────────────────────────────────
+const START_DATE = new Date(2026, 2, 16);
+const PLAN_DAYS = 183;
+const WORKOUT_DAYS = [2, 4, 6];
+const WORKOUT_ROTATION = ['strength', 'hypertrophy', 'power'];
+
+const WORKOUTS = {
+  strength: {
+    name: 'Day 1 — Strength Focus', duration: '~45 min',
+    warmup: '5 min: leg swings, arm circles, hip hinges, 20 light KB swings',
+    exercises: [
+      { name: 'KB Goblet Squat', sets: '4 × 10–12', rest: '75s', note: 'KB at chest, knees track toes, chest tall', tag: 'Lower' },
+      { name: 'DB Romanian Deadlift', sets: '4 × 10–12', rest: '75s', note: 'Hip hinge, soft knee, neutral spine', tag: 'Posterior' },
+      { name: 'DB Bench Press', sets: '3 × 10–12', rest: '60s', note: 'Controlled descent, full ROM — floor or bench', tag: 'Push' },
+      { name: 'DB Bent-Over Row', sets: '3 × 10–12', rest: '60s', note: 'Drive elbow back, squeeze lats at top', tag: 'Pull' },
+      { name: 'KB Overhead Press', sets: '3 × 8–10 / arm', rest: '60s', note: 'Standing single-arm, brace core, no lumbar arch', tag: 'Push' },
+      { name: 'KB Swings (Finisher)', sets: '3 × 20', rest: '45s', note: 'Explosive hip drive — not a squat', tag: 'Cardio' },
+    ],
+    cardio: '15 min optional steady-state walk/bike after lifting'
+  },
+  hypertrophy: {
+    name: 'Day 2 — Hypertrophy + HIIT', duration: '~50 min',
+    warmup: '5 min: jump rope or marching + dynamic stretches',
+    exercises: [
+      { name: 'DB Split Squat (RFE)', sets: '3 × 10 / leg', rest: '60s', note: 'Rear foot elevated, knee tracks over 2nd toe', tag: 'Lower' },
+      { name: 'KB Sumo Deadlift', sets: '4 × 10–12', rest: '75s', note: 'Wide stance, drive floor away, squeeze glutes at top', tag: 'Posterior' },
+      { name: 'DB Incline Press', sets: '3 × 10–12', rest: '60s', note: '30–45° incline, upper chest emphasis', tag: 'Push' },
+      { name: 'KB Renegade Row', sets: '3 × 8 / arm', rest: '60s', note: 'Plank position, anti-rotation core work built in', tag: 'Pull' },
+      { name: 'DB Lateral Raises + Curls', sets: '3 × 12 (superset)', rest: '45s', note: 'Light weight, slow tempo — shoulders + biceps', tag: 'Arms' },
+      { name: 'HIIT Finisher', sets: '4 rounds · 30s on / 20s off', rest: '30s between rounds', note: '20 KB swings + 5 burpees per round', tag: 'HIIT' },
+    ],
+    cardio: null
+  },
+  power: {
+    name: 'Day 3 — Power + Conditioning', duration: '~55–60 min',
+    warmup: '5 min: KB halos, hip circles, thoracic rotations',
+    exercises: [
+      { name: 'KB Clean & Press', sets: '4 × 6–8 / arm', rest: '90s', note: 'Explosive clean from hang, press from rack position', tag: 'Full Body' },
+      { name: 'DB Goblet Squat — Pause', sets: '4 × 8 (2s pause)', rest: '75s', note: '2-second pause at bottom, builds time under tension', tag: 'Lower' },
+      { name: 'DB Push-Up Row', sets: '3 × 8', rest: '60s', note: 'Push-up then row each arm — high motor recruitment', tag: 'Full Body' },
+      { name: 'KB Suitcase Carry', sets: '3 × 30m / arm', rest: '60s', note: 'Anti-lateral flexion, oblique and core stability', tag: 'Core' },
+      { name: 'DB RDL + Row Combo', sets: '3 × 10', rest: '60s', note: 'Hinge down → row at bottom → stand up', tag: 'Full Body' },
+    ],
+    cardio: '20–30 min Zone 2 steady-state (walk or bike). Conversational pace.'
+  }
+};
+
+const MEALS_TRAINING = [
+  { name: 'Breakfast', time: '6:30 AM', macros: { p:55, c:60, f:15, cal:595 }, foods: ['5 large eggs scrambled (or 2 whole + 4 whites)', '1 cup cooked oatmeal (80g dry rolled oats) + cinnamon', '½ cup low-fat cottage cheese on the side', 'Black coffee or green tea'] },
+  { name: 'Lunch', time: '12:30 PM', macros: { p:55, c:55, f:15, cal:575 }, foods: ['6 oz lean ground turkey or grilled chicken breast', '1 cup cooked brown rice or sweet potato (200g)', '2 cups leafy greens + cucumber + cherry tomatoes', 'Olive oil + lemon dressing (1 tsp olive oil)'] },
+  { name: 'Pre-Workout Snack', time: '3:30 PM', macros: { p:30, c:40, f:5, cal:325 }, foods: ['1 scoop whey protein in water', '1 medium banana', '1 rice cake + thin smear almond butter', 'Eat 60–90 min before training'] },
+  { name: 'Post-Workout Dinner', time: '7:00 PM', macros: { p:55, c:35, f:20, cal:540 }, foods: ['7 oz salmon or 8 oz white fish (cod/tilapia)', '1.5 cups roasted vegetables (broccoli, zucchini, peppers)', '½ cup cooked quinoa or small sweet potato', 'Olive oil, garlic, herbs — season generously'] },
+  { name: 'Evening Snack', time: '9:30 PM', macros: { p:30, c:10, f:10, cal:250 }, foods: ['1 cup 2% or full-fat Greek yogurt (plain)', '1 tbsp natural almond butter or small handful walnuts', 'Casein-rich — slow digestion overnight'] }
+];
+
+const MEALS_REST = [
+  { name: 'Breakfast', time: '7:00 AM', macros: { p:50, c:35, f:15, cal:475 }, foods: ['4 egg whites + 1 whole egg scrambled', '½ cup oatmeal (40g dry) + berries', '½ cup cottage cheese on the side', 'Black coffee or green tea'] },
+  { name: 'Lunch', time: '12:30 PM', macros: { p:55, c:35, f:15, cal:495 }, foods: ['6 oz grilled chicken breast or canned tuna in water', '1 cup mixed salad greens + vegetables + 2 tbsp hummus', '½ cup cooked lentils or chickpeas', 'Apple cider vinegar + olive oil dressing (1 tsp)'] },
+  { name: 'Afternoon Snack', time: '3:30 PM', macros: { p:30, c:20, f:8, cal:272 }, foods: ['1 scoop whey protein in water', '1 medium apple or pear', '12 almonds or small handful walnuts'] },
+  { name: 'Dinner', time: '6:30 PM', macros: { p:55, c:30, f:17, cal:489 }, foods: ['7 oz lean beef (95% lean) or 8 oz shrimp', '2 cups roasted non-starchy veg (broccoli, asparagus, zucchini)', '½ cup black beans or small sweet potato', 'Season with olive oil, spices, lemon'] },
+  { name: 'Evening Snack', time: '9:00 PM', macros: { p:25, c:10, f:10, cal:230 }, foods: ['1 cup plain Greek yogurt', '1 tbsp nut butter or 10 walnut halves', 'Cinnamon or vanilla if desired'] }
+];
+
+const PHASES = [
+  { name: 'Phase 1 — Foundation', tip: 'Focus on form and consistency. Don\'t chase heavy weights yet. Learn the movement patterns and nail your nutrition daily.' },
+  { name: 'Phase 2 — Build', tip: 'Add weight to every exercise where you\'ve hit the top of the rep range. Track every session. Progress is the goal.' },
+  { name: 'Phase 3 — Push', tip: 'Increase intensity. Add sets or exercises where recovery allows. Consider adding a 4th optional light cardio session.' },
+  { name: 'Phase 4 — Refine', tip: 'Dial nutrition. Tighten up on carb timing. Take progress photos and measurements this week — compare to Week 1.' },
+  { name: 'Phase 5 — Peak', tip: 'You\'re in advanced territory now. Up weights aggressively. Consider a deload at week 20. Sleep is your #1 recovery tool.' },
+  { name: 'Phase 6 — Finish Strong', tip: 'Final push. Mental toughness matters here. Review all progress. Set new 6-month targets.' }
+];
+
+const REST_TIPS = [
+  'Walk 20–30 min at an easy pace. Active recovery beats total rest for endomorphs.',
+  'Focus on getting 8 hours of sleep tonight. Recovery is where muscle is built.',
+  'Foam roll your quads, hamstrings, and thoracic spine for 10 minutes.',
+  'Drink an extra glass of water today. Hydration drives fat metabolism.',
+  'Today\'s job: hit your macros perfectly. Protein especially.',
+  'Do 10 min of mobility work — hip flexors, shoulders, and ankles.',
+  'Mental recovery matters. Keep stress low — cortisol fights recomp.',
+  'Consider an easy 20 min bike or walk to burn extra calories at low intensity.'
+];
+
+// ── STATE ──────────────────────────────────────────────────
+let state = {};
+let currentDate = new Date();
+let calendarMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+let currentUserId = null;
+let dbListener = null;
+let saveTimeout = null;
+
+function setSyncStatus(status) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  if (!dot || !lbl) return;
+  dot.className = 'sync-dot' + (status === 'syncing' ? ' syncing' : status === 'error' ? ' error' : '');
+  lbl.textContent = status === 'syncing' ? 'Saving...' : status === 'error' ? 'Error' : 'Synced';
+}
+
+function getKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+
+function getDayState(date) {
+  const k = getKey(date);
+  if (!state[k]) state[k] = { meals: {}, exercises: {}, notes: '', completed: false };
+  return state[k];
+}
+
+function saveToFirebase() {
+  if (!currentUserId) return;
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(async () => {
+    setSyncStatus('syncing');
+    try {
+      await set(ref(db, `users/${currentUserId}/data`), state);
+      setSyncStatus('synced');
+    } catch(e) {
+      setSyncStatus('error');
+    }
+  }, 600);
+}
+
+// ── HELPERS ────────────────────────────────────────────────
+function daysBetween(d1, d2) { return Math.floor((d2 - d1) / 86400000); }
+function isInPlan(date) { const d = daysBetween(START_DATE, date); return d >= 0 && d < PLAN_DAYS; }
+function isWorkoutDay(date) { return WORKOUT_DAYS.includes(date.getDay()); }
+
+function getWorkoutIndex(date) {
+  let count = 0;
+  const d = new Date(START_DATE);
+  while (d < date) { if (isWorkoutDay(d)) count++; d.setDate(d.getDate()+1); }
+  return count % 3;
+}
+
+function getWorkout(date) { return WORKOUTS[WORKOUT_ROTATION[getWorkoutIndex(date)]]; }
+
+function getPhase(date) {
+  const w = Math.floor(daysBetween(START_DATE, date) / 7);
+  if (w < 4) return PHASES[0]; if (w < 8) return PHASES[1]; if (w < 12) return PHASES[2];
+  if (w < 16) return PHASES[3]; if (w < 22) return PHASES[4]; return PHASES[5];
+}
+
+function getWeekNum(date) { return Math.floor(daysBetween(START_DATE, date) / 7) + 1; }
+
+function formatDate(date) {
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+}
+
+function calcLoggedMacros(date) {
+  const ds = getDayState(date);
+  const meals = isWorkoutDay(date) ? MEALS_TRAINING : MEALS_REST;
+  let p=0,c=0,f=0,cal=0;
+  meals.forEach((m,i) => { if (ds.meals[i]) { p+=m.macros.p; c+=m.macros.c; f+=m.macros.f; cal+=m.macros.cal; } });
+  return {p,c,f,cal};
+}
+
+function calcTargetMacros(date) {
+  return isWorkoutDay(date) ? {p:220,c:220,f:65,cal:2400} : {p:220,c:130,f:65,cal:2100};
+}
+
+function calcStreak() {
+  let streak = 0;
+  const d = new Date(currentDate);
+  d.setDate(d.getDate()-1);
+  while (isInPlan(d)) {
+    if (state[getKey(d)] && state[getKey(d)].completed) { streak++; d.setDate(d.getDate()-1); }
+    else break;
+  }
+  return streak;
+}
+
+function calcTotalLogged() { return Object.values(state).filter(d => d.completed).length; }
+
+// ── RENDER ─────────────────────────────────────────────────
+function renderAll() {
+  renderHeader();
+  renderMiniCal();
+  renderSidebarMacros();
+  renderStreak();
+  renderProgressRings();
+  renderMainContent();
+}
+
+function renderHeader() {
+  const wn = Math.max(1, Math.min(getWeekNum(currentDate), 26));
+  document.getElementById('week-badge').textContent = `Week ${wn}`;
+  document.getElementById('phase-badge').textContent = getPhase(currentDate).name;
+}
+
+function renderMiniCal() {
+  const container = document.getElementById('mini-cal');
+  const year = calendarMonth.getFullYear(), month = calendarMonth.getMonth();
+  document.getElementById('month-label').textContent = new Date(year,month,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const firstDay = new Date(year,month,1).getDay();
+  const daysInMonth = new Date(year,month+1,0).getDate();
+  const today = new Date();
+  let cells = [];
+  for (let i=0;i<firstDay;i++) cells.push(null);
+  for (let d=1;d<=daysInMonth;d++) cells.push(new Date(year,month,d));
+  while (cells.length%7!==0) cells.push(null);
+  let html='';
+  cells.forEach((d,i) => {
+    if (i%7===0) html+='<div class="week-row">';
+    if (!d) { html+='<div class="day-cell" style="opacity:0;pointer-events:none"></div>'; }
+    else {
+      const k=getKey(d), isToday=d.toDateString()===today.toDateString(), isSel=d.toDateString()===currentDate.toDateString();
+      const inPlan=isInPlan(d), workout=inPlan&&isWorkoutDay(d), logged=state[k]&&state[k].completed;
+      let cls='day-cell';
+      if(isToday) cls+=' today'; if(isSel) cls+=' selected'; if(workout) cls+=' workout-marker'; if(logged) cls+=' logged';
+      html+=`<div class="${cls}" onclick="window._selectDay(${d.getFullYear()},${d.getMonth()},${d.getDate()})">${d.getDate()}<div class="dot"></div></div>`;
+    }
+    if ((i+1)%7===0) html+='</div>';
+  });
+  container.innerHTML=html;
+}
+
+function renderSidebarMacros() {
+  const logged=calcLoggedMacros(currentDate), target=calcTargetMacros(currentDate);
+  const items=[{lbl:'Protein',cur:logged.p,tgt:target.p,color:'#60a5fa'},{lbl:'Carbs',cur:logged.c,tgt:target.c,color:'#fbbf24'},{lbl:'Fat',cur:logged.f,tgt:target.f,color:'#4ade80'},{lbl:'Calories',cur:logged.cal,tgt:target.cal,color:'#f472b6'}];
+  document.getElementById('sidebar-macros').innerHTML = items.map(it=>{
+    const pct=Math.min(100,Math.round(it.cur/it.tgt*100));
+    return `<div class="mp-row"><div class="mp-lbl">${it.lbl}</div><div class="mp-bar-wrap"><div class="mp-bar" style="width:${pct}%;background:${it.color}"></div></div><div class="mp-nums"><span>${it.cur}</span>/${it.tgt}</div></div>`;
+  }).join('');
+}
+
+function renderStreak() {
+  const s=calcStreak();
+  document.getElementById('streak-num').textContent=s;
+  document.getElementById('streak-sub').textContent=s===0?'Complete a day to start':s===1?'1 day completed':`${s} days in a row`;
+}
+
+function renderProgressRings() {
+  const total=PLAN_DAYS, done=calcTotalLogged();
+  const wkTotal=Array.from({length:PLAN_DAYS},(_,i)=>{const d=new Date(START_DATE);d.setDate(d.getDate()+i);return d;}).filter(isWorkoutDay).length;
+  const wkDone=Object.entries(state).filter(([k,v])=>{const[yr,mo,da]=k.split('-').map(Number);return isWorkoutDay(new Date(yr,mo-1,da))&&v.completed;}).length;
+  const rings=[{label:'Days',val:done,max:total,color:'#7c6af7'},{label:'Workouts',val:wkDone,max:wkTotal,color:'#4ade80'}];
+  document.getElementById('progress-rings').innerHTML=rings.map(r=>{
+    const pct=r.max>0?r.val/r.max:0, circ=2*Math.PI*16, dash=circ*pct;
+    return `<div class="ring-card"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="16" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4"/><circle cx="22" cy="22" r="16" fill="none" stroke="${r.color}" stroke-width="4" stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" fill="${r.color}" font-family="'DM Mono',monospace" font-size="9" font-weight="500">${r.val}</text></svg><div class="ring-label">${r.label}</div><div class="ring-val">${Math.round(pct*100)}%</div></div>`;
+  }).join('');
+}
+
+function renderWeekStrip() {
+  const dow=currentDate.getDay(), weekStart=new Date(currentDate);
+  weekStart.setDate(currentDate.getDate()-dow);
+  const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], today=new Date();
+  let html='<div class="week-strip">';
+  for(let i=0;i<7;i++){
+    const d=new Date(weekStart); d.setDate(weekStart.getDate()+i);
+    const isToday=d.toDateString()===today.toDateString(), isSel=d.toDateString()===currentDate.toDateString();
+    const workout=isWorkoutDay(d)&&isInPlan(d), ds=state[getKey(d)], hasLog=ds&&ds.completed;
+    let cls='ws-cell'; if(isToday) cls+=' today'; if(isSel) cls+=' selected'; cls+=workout?' workout-day':' rest-day'; if(hasLog) cls+=' has-log';
+    html+=`<div class="${cls}" onclick="window._selectDay(${d.getFullYear()},${d.getMonth()},${d.getDate()})"><div class="ws-day">${dayNames[i]}</div><div class="ws-num">${d.getDate()}</div><div class="ws-type">${workout?'Workout':'Rest'}</div><div class="ws-logged-dot"></div></div>`;
+  }
+  return html+'</div>';
+}
+
+function renderMainContent() {
+  const content=document.getElementById('main-content');
+  const workout=isWorkoutDay(currentDate), inPlan=isInPlan(currentDate);
+  const ds=getDayState(currentDate), target=calcTargetMacros(currentDate), phase=getPhase(currentDate);
+  const wn=getWeekNum(currentDate);
+  let html=renderWeekStrip();
+
+  html+=`<div class="day-header"><div>
+    <div class="overline">${inPlan?`Week ${Math.max(1,Math.min(wn,26))} · Day ${Math.max(1,daysBetween(START_DATE,currentDate)+1)}`:'Outside Plan'}</div>
+    <div class="day-title">${formatDate(currentDate)}</div>
+    <div><span class="day-type-badge ${workout?'badge-workout':'badge-rest'}">${workout?'● Training Day':'● Rest Day'}</span></div>
+    ${inPlan?`<div class="tip-inline" style="margin-top:10px;max-width:500px">${phase.tip}</div>`:''}
+  </div></div>`;
+
+  if(!inPlan){
+    html+=`<div class="rest-banner"><div style="font-size:32px;margin-bottom:8px">📅</div><div class="rest-title">Outside Plan</div><div class="rest-tip">This date is outside your 6-month plan (March 16 – September 14, 2026).</div></div>`;
+    content.innerHTML=html; return;
+  }
+
+  html+='<div class="day-grid">';
+
+  // Macros card
+  const logged=calcLoggedMacros(currentDate);
+  html+=`<div class="card"><div class="card-header"><div class="card-title-row"><span class="card-icon">📊</span><span class="card-title">Daily Targets</span></div></div><div class="card-body">
+    <div class="macro-target-row">
+      <div class="macro-chip cal"><div class="macro-chip-val">${target.cal}</div><div class="macro-chip-lbl">kcal</div></div>
+      <div class="macro-chip pro"><div class="macro-chip-val">${target.p}g</div><div class="macro-chip-lbl">protein</div></div>
+      <div class="macro-chip carb"><div class="macro-chip-val">${target.c}g</div><div class="macro-chip-lbl">carbs</div></div>
+      <div class="macro-chip fat"><div class="macro-chip-val">${target.f}g</div><div class="macro-chip-lbl">fat</div></div>
+    </div>
+    <div class="macro-progress">
+      ${[{lbl:'Protein',cur:logged.p,tgt:target.p,color:'#60a5fa'},{lbl:'Carbs',cur:logged.c,tgt:target.c,color:'#fbbf24'},{lbl:'Fat',cur:logged.f,tgt:target.f,color:'#4ade80'},{lbl:'Calories',cur:logged.cal,tgt:target.cal,color:'#f472b6'}].map(it=>{
+        const pct=Math.min(100,Math.round(it.cur/it.tgt*100));
+        return `<div class="mp-row"><div class="mp-lbl">${it.lbl}</div><div class="mp-bar-wrap"><div class="mp-bar" style="width:${pct}%;background:${it.color}"></div></div><div class="mp-nums"><span>${it.cur}</span>/${it.tgt}g</div></div>`;
+      }).join('')}
+    </div>
+  </div></div>`;
+
+  // Workout or rest card
+  if(workout){
+    const w=getWorkout(currentDate), wTime=currentDate.getDay()===6?'8:00 AM – 1:00 PM':'7:00 AM';
+    html+=`<div class="card"><div class="card-header"><div class="card-title-row"><span class="card-icon">🏋️</span><span class="card-title">${w.name}</span></div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)">${wTime} · ${w.duration}</div></div><div class="card-body">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;padding:8px;background:var(--bg3);border-radius:6px;border-left:2px solid var(--accent)"><strong style="color:var(--text2);font-weight:500">Warm-up:</strong> ${w.warmup}</div>
+      ${w.exercises.map((ex,i)=>{
+        const exS=ds.exercises[i]||{}, logged_ex=exS.logged;
+        return `<div class="exercise-item${logged_ex?' logged':''}" id="ex-${i}">
+          <div class="ex-header"><div class="ex-name">${ex.name}</div><span class="ex-tag">${ex.tag}</span></div>
+          <div class="ex-sets">${ex.sets} · Rest ${ex.rest}</div>
+          <div class="ex-note">${ex.note}</div>
+          <div class="ex-log-row">
+            <input class="ex-input" id="ex-weight-${i}" placeholder="Weight (lbs/kg)" value="${exS.weight||''}" oninput="window._saveExWeight(${i},this.value)">
+            <input class="ex-input" id="ex-reps-${i}" placeholder="Actual reps" value="${exS.reps||''}" oninput="window._saveExReps(${i},this.value)">
+            <button class="ex-log-btn" onclick="window._toggleExercise(${i})">${logged_ex?'✓ Done':'Log'}</button>
+          </div>
+        </div>`;
+      }).join('')}
+      ${w.cardio?`<div class="cardio-block"><div class="cardio-title">Cardio Finisher</div><div class="cardio-desc">${w.cardio}</div></div>`:''}
+    </div></div>`;
+  } else {
+    const tipIdx=daysBetween(START_DATE,currentDate)%REST_TIPS.length;
+    html+=`<div class="card"><div class="card-header"><div class="card-title-row"><span class="card-icon">🌿</span><span class="card-title">Rest & Recovery</span></div></div><div class="card-body">
+      <div class="rest-title" style="font-size:15px;color:var(--teal)">Active Recovery Day</div>
+      <div style="font-size:13px;color:var(--text2);margin:8px 0 12px;line-height:1.6">Your muscles are repairing and growing. Eat your macros, sleep well, and move gently.</div>
+      <div class="tip-inline"><strong style="font-weight:500;color:var(--text)">Recovery tip:</strong> ${REST_TIPS[tipIdx]}</div>
+      <div style="margin-top:14px;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Rest day targets</div>
+      <div class="macro-target-row">
+        <div class="macro-chip cal"><div class="macro-chip-val">2,100</div><div class="macro-chip-lbl">kcal</div></div>
+        <div class="macro-chip pro"><div class="macro-chip-val">220g</div><div class="macro-chip-lbl">protein</div></div>
+        <div class="macro-chip carb"><div class="macro-chip-val">130g</div><div class="macro-chip-lbl">carbs</div></div>
+        <div class="macro-chip fat"><div class="macro-chip-val">65g</div><div class="macro-chip-lbl">fat</div></div>
+      </div>
+    </div></div>`;
+  }
+
+  // Meals card
+  const meals=workout?MEALS_TRAINING:MEALS_REST;
+  html+=`<div class="card card-span"><div class="card-header"><div class="card-title-row"><span class="card-icon">🍽️</span><span class="card-title">Meal Plan — ${workout?'Training Day':'Rest Day'}</span></div><div style="font-size:11px;color:var(--text3)">Tap each meal when eaten</div></div><div class="card-body">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
+      ${meals.map((m,i)=>{
+        const isLogged=ds.meals[i];
+        return `<div class="meal-item${isLogged?' logged':''}" id="meal-${i}">
+          <div class="meal-header-row"><div class="meal-name">${m.name}</div><div class="meal-time">${m.time}</div></div>
+          <div class="meal-macros-small"><span class="m-pill p">${m.macros.p}g P</span><span class="m-pill c">${m.macros.c}g C</span><span class="m-pill f">${m.macros.f}g F</span><span class="m-pill cal">${m.macros.cal} kcal</span></div>
+          <ul class="food-items">${m.foods.map(f=>`<li>${f}</li>`).join('')}</ul>
+          <button class="log-meal-btn" onclick="window._toggleMeal(${i})">${isLogged?'✓ Logged':'Mark as eaten'}</button>
+        </div>`;
+      }).join('')}
+    </div>
+  </div></div>`;
+
+  // Notes + complete
+  html+=`<div class="card card-span"><div class="card-header"><div class="card-title-row"><span class="card-icon">📝</span><span class="card-title">Daily Notes & Completion</span></div></div><div class="card-body">
+    <div style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start">
+      <div>
+        <textarea class="notes-area" id="day-notes" placeholder="How did you feel? Any PRs? Notes on meals or energy levels...">${ds.notes||''}</textarea>
+        <button class="save-notes-btn" onclick="window._saveNotes()">Save notes <span class="saved-flash" id="saved-flash">Saved ✓</span></button>
+      </div>
+      <div style="min-width:180px">
+        <button class="complete-day-btn${ds.completed?' completed':''}" id="complete-btn" onclick="window._toggleComplete()">${ds.completed?'✓ Day Completed!':'Mark Day Complete'}</button>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center">Marks this day in your streak</div>
+      </div>
+    </div>
+  </div></div>`;
+
+  html+='</div>';
+  content.innerHTML=html;
+}
+
+// ── ACTIONS ────────────────────────────────────────────────
+window._selectDay = function(y,m,d) {
+  currentDate=new Date(y,m,d);
+  if(currentDate.getMonth()!==calendarMonth.getMonth()||currentDate.getFullYear()!==calendarMonth.getFullYear())
+    calendarMonth=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);
+  renderAll();
+};
+
+window.navigateDay = function(dir) {
+  currentDate.setDate(currentDate.getDate()+dir);
+  if(currentDate.getMonth()!==calendarMonth.getMonth()||currentDate.getFullYear()!==calendarMonth.getFullYear())
+    calendarMonth=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);
+  renderAll();
+};
+
+window.changeMonth = function(dir) {
+  calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+dir,1);
+  renderMiniCal();
+};
+
+window.goToday = function() {
+  currentDate=new Date();
+  calendarMonth=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);
+  renderAll();
+};
+
+window._toggleMeal = function(idx) {
+  const ds=getDayState(currentDate);
+  ds.meals[idx]=!ds.meals[idx];
+  saveToFirebase(); renderAll();
+};
+
+window._toggleExercise = function(idx) {
+  const ds=getDayState(currentDate);
+  if(!ds.exercises[idx]) ds.exercises[idx]={};
+  ds.exercises[idx].logged=!ds.exercises[idx].logged;
+  saveToFirebase();
+  const el=document.getElementById(`ex-${idx}`);
+  if(el){ el.classList.toggle('logged',ds.exercises[idx].logged); const btn=el.querySelector('.ex-log-btn'); if(btn) btn.textContent=ds.exercises[idx].logged?'✓ Done':'Log'; }
+  renderSidebarMacros();
+};
+
+window._saveExWeight = function(idx,val) {
+  const ds=getDayState(currentDate);
+  if(!ds.exercises[idx]) ds.exercises[idx]={};
+  ds.exercises[idx].weight=val; saveToFirebase();
+};
+
+window._saveExReps = function(idx,val) {
+  const ds=getDayState(currentDate);
+  if(!ds.exercises[idx]) ds.exercises[idx]={};
+  ds.exercises[idx].reps=val; saveToFirebase();
+};
+
+window._saveNotes = function() {
+  const el=document.getElementById('day-notes'); if(!el) return;
+  getDayState(currentDate).notes=el.value;
+  saveToFirebase();
+  const flash=document.getElementById('saved-flash');
+  if(flash){ flash.style.opacity='1'; setTimeout(()=>flash.style.opacity='0',1500); }
+};
+
+window._toggleComplete = function() {
+  const ds=getDayState(currentDate);
+  ds.completed=!ds.completed;
+  saveToFirebase(); renderAll();
+};
+
+// ── AUTH ───────────────────────────────────────────────────
+window.signIn = async function() {
+  const email=document.getElementById('auth-email').value.trim();
+  const password=document.getElementById('auth-password').value;
+  const errEl=document.getElementById('auth-error');
+  const btn=document.getElementById('auth-btn');
+  errEl.style.display='none';
+  btn.disabled=true; btn.textContent='Signing in...';
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch(e) {
+    errEl.textContent = e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'||e.code==='auth/user-not-found'
+      ? 'Incorrect email or password.' : 'Sign in failed. Please try again.';
+    errEl.style.display='block';
+    btn.disabled=false; btn.textContent='Sign In';
+  }
+};
+
+window.signOut = async function() {
+  if(dbListener) { off(ref(db,`users/${currentUserId}/data`)); dbListener=null; }
+  await fbSignOut(auth);
+  document.getElementById('app').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('auth-btn').disabled=false;
+  document.getElementById('auth-btn').textContent='Sign In';
+  state={};
+};
+
+// Allow Enter key on password field
+document.getElementById('auth-password').addEventListener('keydown', e => { if(e.key==='Enter') window.signIn(); });
+document.getElementById('auth-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('auth-password').focus(); });
+
+onAuthStateChanged(auth, async (user) => {
+  if(user) {
+    currentUserId=user.uid;
+    document.getElementById('auth-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    setSyncStatus('syncing');
+    // Load data then listen for changes
+    const snapshot = await get(ref(db,`users/${currentUserId}/data`));
+    if(snapshot.exists()) state=snapshot.val()||{};
+    setSyncStatus('synced');
+    // Set current date
+    const today=new Date();
+    currentDate=today<START_DATE?new Date(START_DATE):today;
+    calendarMonth=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);
+    renderAll();
+    // Real-time listener
+    dbListener=onValue(ref(db,`users/${currentUserId}/data`),(snap)=>{
+      if(snap.exists()){ state=snap.val()||{}; renderSidebarMacros(); renderMiniCal(); renderStreak(); renderProgressRings(); }
+    });
+  }
+});
+</script>
+</body>
+</html>
